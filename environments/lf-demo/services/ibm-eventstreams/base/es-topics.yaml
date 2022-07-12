@@ -1,0 +1,67 @@
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: KafkaTopic
+metadata:
+  name: lf-raw-tx
+  namespace: lf-demo
+  labels:
+    eventstreams.ibm.com/cluster: dev
+spec:
+  partitions: 1 
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    cleanup.policy: delete
+    retention.ms: 604800000
+    segment.ms: 604800000
+    file.delete.delay.ms: 60000
+    max.message.bytes: 1048588
+    message.timestamp.type: LogAppendTime
+---
+
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: KafkaTopic
+metadata:
+  name: lf-tx-a
+  namespace: lf-demo
+  labels:
+    eventstreams.ibm.com/cluster: dev
+spec:
+  partitions: 1
+  replicas: 3
+  config:
+    min.insync.replicas: 1
+    cleanup.policy: delete
+    delete.retention.ms: 86400000
+---
+
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: KafkaTopic
+metadata:
+  name: lf-tx-b
+  namespace: lf-demo
+  labels:
+    eventstreams.ibm.com/cluster: dev
+spec:
+  partitions: 1
+  replicas: 3
+  config:
+    min.insync.replicas: 1
+    cleanup.policy: delete
+    delete.retention.ms: 86400000
+
+--- 
+
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: KafkaTopic
+metadata:
+  name: lf-dlq
+  namespace: lf-demo
+  labels:
+    eventstreams.ibm.com/cluster: dev
+spec:
+  partitions: 1
+  replicas: 3
+  config:
+    min.insync.replicas: 1
+    cleanup.policy: delete
+    delete.retention.ms: 86400000
