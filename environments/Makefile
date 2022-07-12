@@ -12,6 +12,9 @@ ES_VERSION=v11.0
 all: create_ns
 	@oc project $$DEV_NS 
 	eventstreams_config
+	mq_config
+	kafka_connect
+	start_mq_source
 
 create_ns:
 	@oc apply -k ./lf-demo/env/overlays
@@ -23,7 +26,7 @@ mq_config:
 	@oc apply -k ./lf-demo/services/ibm-mq/overlays
 
 kafka_connect:
-	@oc apply -k ./lf-demo/services/kconnect/overlays -n lf-demo
+	@oc apply -k ./lf-demo/services/kconnect -n lf-demo
 
 # ----------- app specific -------------
 start_mq_source:

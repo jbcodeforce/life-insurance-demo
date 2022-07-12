@@ -1,6 +1,6 @@
 resources:
-# - deployment.yaml
-# - service.yaml
+- deployment.yaml
+- service.yaml
 - configMap.yaml
-- qmgr.yaml
-# - route.yaml
+# - qmgr.yaml
+- route.yaml
