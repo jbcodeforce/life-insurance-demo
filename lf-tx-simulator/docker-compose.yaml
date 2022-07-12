@@ -1,0 +1,27 @@
+version: '3.7'
+services:
+  ibmmq:
+    image: ibm-mqadvanced-server-dev:9.2.4.0-amd64
+    container_name: ibmmq
+    hostname: ibmmq
+    ports:
+        - '1414:1414'
+        - '9443:9443'
+        - '9157:9157'
+        - '5672:5672'
+    volumes:
+        - qm1data:/mnt/mqm
+    stdin_open: true
+    tty: true
+    restart: always
+    environment:
+        LICENSE: accept
+        MQ_QMGR_NAME: QM1
+        MQ_APP_PASSWORD: passw0rd
+        MQ_ENABLE_METRICS: "true"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "tail -n 5 /var/mqm/qmgrs/QM1/errors/amqp_0.log | grep 'AMQP Service started successfully'"]
+      interval: 2s
+      retries: 20
+volumes:
+  qm1data:

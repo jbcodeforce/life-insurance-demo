@@ -1,25 +1,17 @@
 
 # Setting global variables
 
-DEV_NS = lf-demo
-ES_VERSION = v11.0
+DEV_NS=lf-demo
+ES_VERSION=v11.0
 
-
-# IBM subscriptions
-# -----------------
-
-set_entitlement_key:
-	@oc create secret docker-registry ibm-entitlement-key --docker-username=cp --docker-server=cp.icr.io --namespace=openshift-operators --docker-password=$(KEY)
-	
 
 # -------------------------------------------------------
 # Entry points
 # ------------------------------------------------------- 
 
-all:
-	create_ns
+all: create_ns
 	@oc project $$DEV_NS 
-	set_entitlement_key  
+	eventstreams_config
 
 create_ns:
 	@oc apply -k ./lf-demo/env/overlays

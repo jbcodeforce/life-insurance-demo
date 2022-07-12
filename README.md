@@ -17,7 +17,7 @@ This repository includes a simple example of how to integrate with a MQ system p
 * MQ broker, with generic transaction
 * Event Streams, IBM packaging of Kafka, Apicur.io, and Strimzi.
 * Event End Point Gateway
-
+* A Transaction simulator to post to MQ using Reactive Messaging and AMQP
 
 ## Run demo locally on your laptop
 
@@ -38,3 +38,9 @@ We have a makefile to drive the installation of the demonstration components
 cd environments
 make all
 ```
+
+
+## More reading
+
+* [Building reactive Java apps with Quarkus and IBM MQ](https://developer.ibm.com/tutorials/mq-building-cloud-native-reactive-java-messaging-applications/)
+* [Quarkus AMQP 1.0 Quickstart](https://quarkus.io/guides/amqp)
