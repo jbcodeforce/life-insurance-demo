@@ -32,25 +32,28 @@ kafka_connect:
 start_mq_source:
 	@oc apply -f ./lf-demo/apps/mq-source/kafka-mq-src-connector.yaml -n $(DEV_NS)
 
+apps: tx_simulator
 
+tx_simulator:
+	@oc apply -k ./lf-demo/apps/lf-tx-simulator/overlays
 
 clean:  clean_jobs 
 	@oc delete -k ./lf-demo/services/ibm-mq/overlays
 	@oc delete -k ./lf-demo/services/ibm-eventstreams/overlays
+	@oc delete -k ./lf-demo/apps/lf-tx_simulator/overlays
 
 clean_jobs:
 	@oc delete job cpsecret 
-	@oc delete job cp-ca-secret 
-	@oc delete job cp-tls-usr-secret
+
 
 output_details:
 	@echo "Install complete.\n\n"
 	@echo "Openshift admin credential"
 	@oc extract secret/openshift-gitops-cluster -n openshift-gitops --to=-
 	@echo "\nMQ Console console url"
-	@oc get queuemanager store-mq -o jsonpath='{.status.adminUiUrl}'  -n $(DEV_NS)
+	@oc get route ibmmq-route -o jsonpath='{.status.ingress[].host}'  -n $(DEV_NS)
 	@echo "\n\nEvent Streams Console console url"
 	@oc get route dev-ibm-es-ui -o jsonpath='{.status.ingress[].host}'  -n $(DEV_NS)
-	@echo "\n\nStore simulator url\n"
-	@oc get route store-simulator -o jsonpath='{.status.ingress[].host}'  -n $(DEV_NS)
+	@echo "\n\nTransaction simulator url\n"
+	@oc get route lf-tx-simulator -o jsonpath='{.status.ingress[].host}'  -n $(DEV_NS)
 

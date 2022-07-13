@@ -1,0 +1,5 @@
+[
+   {"id": 1, "category_name": "Person"},
+   {"id": 2, "category_name": "VIP"},
+   {"id": 3, "category_name": "Employee"}
+]

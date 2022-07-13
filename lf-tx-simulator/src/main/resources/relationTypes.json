@@ -1,0 +1,7 @@
+[
+   {"id": 1, "relation_type": "Spouse"},
+   {"id": 2, "relation_type": "Child"},
+   {"id": 3, "relation_type": "Partner"},
+   {"id": 4, "relation_type": "Cousin"},
+   {"id": 5, "relation_type": "Parent"}
+]

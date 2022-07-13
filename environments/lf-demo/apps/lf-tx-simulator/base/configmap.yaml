@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lf-tx-simulator-cm
+data:
+  APP_VERSION: 0.0.1
+  MP_MESSAGING_OUTGOING_LFTX_ADDRESS: RAWTX
+  AMQP_HOST: ibmmq.lf-demo.svc
+  
+
+  

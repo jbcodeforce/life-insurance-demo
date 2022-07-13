@@ -66,7 +66,7 @@ services:
     depends_on:
       - kafka
   ibmmq:
-    image: ibmcom/mq
+    image: quay.io/ibmcase/ibm-mqadvanced-server-dev:9.2.4.0-amd64
     container_name: ibmmq
     hostname: ibmmq
     ports:
@@ -83,3 +83,11 @@ services:
         MQ_QMGR_NAME: QM1
         MQ_APP_PASSWORD: passw0rd
         MQ_ENABLE_METRICS: "true"
+  tx_simul:
+    container_name: tx_simul
+    image: quay.io/jbcodeforce/lf-tx-simulator
+    ports:
+      - '8080:8080'
+    environment:
+      MP_MESSAGING_OUTGOING_LFTX_ADDRESS: DEV.QUEUE.1
+      AMQP_HOST: ibmmq

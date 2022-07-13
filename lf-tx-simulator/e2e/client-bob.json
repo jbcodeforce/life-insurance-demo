@@ -1,0 +1,14 @@
+{
+    "id": "101010",
+    "code": "C01",
+    "insuredPerson": {
+        "id": 1,
+        "code": "P01",
+        "first_name": "bob",
+        "last_name": "thebuilder",
+        "address": "1 main street, CA, San Franciso",
+        "phone": null,
+        "mobile": null,
+        "email": "bobbuilder@email.com"
+    }
+}
