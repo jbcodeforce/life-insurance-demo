@@ -1,16 +1,11 @@
-# [A simple demonstration for Life insurance client domain]()
+# [A simple demonstration for Life insurance client domain](https://jbcodeforce.github.io/life-insurance-demo/)
 
-This repository includes a simple example of how to integrate with a MQ system processing messages in life insurance domain, and plug eventing into the architecture with minimum disruption.
+This repository includes a simple example of how to integrate with an existing MQ based framework that manage message distribution between MQ applications, in life insurance domain, to plug eventing capabilities like IBM Event Streams (Kafka) with minimum disruption.
 
-## Requirements to demonstrate
+[Read in mkdocs book](https://jbcodeforce.github.io/life-insurance-demo/)
 
-* Demonstrate streaming processing with the exactly once processing
-* Ensure Event order is not changed: in queue with subscription it is possible that a message arrived after another one could be processed before the first one is completed, which could impact data integrity.
-* Demonstrate Data transformation to target different model for specific subscriber (a kafka consumer)
-* Support message content based routing
-* Dead letter queue
-* Support CloudEvent.io to present metadata around the message
-* Support Schema management in registry
+The repository includes different sub folder for each components, and an environment folder for OpenShift deployments.
+
 
 ## Components of the demonstration
 
@@ -58,9 +53,3 @@ We have a makefile to drive the installation of the demonstration components
 cd environments
 make all
 ```
-
-
-## More reading
-
-* [Building reactive Java apps with Quarkus and IBM MQ](https://developer.ibm.com/tutorials/mq-building-cloud-native-reactive-java-messaging-applications/)
-* [Quarkus AMQP 1.0 Quickstart](https://quarkus.io/guides/amqp)
