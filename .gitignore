@@ -1,2 +1,3 @@
-environments/local/kconnect/connect.log.**
+environments/local/kconnect/connect.log**
+environments/local/kconnect/.com_ibm_tools_attach/
 site/

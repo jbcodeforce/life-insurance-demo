@@ -66,7 +66,9 @@ The `ClientRelated` instances store references to the client (client_id), the re
 
 The java classes for this model are in the `lf-tx-simulator` project.
 
-In the future, can extend this model with the Life Insurance offer.
+In the future, can extend this model with the Life Insurance offer and product.
+
+Model inspiration is coming from [Vertabelo blog](https://vertabelo.com/blog/life-insurance-data-model/)
 ## Components 
 
 We will leverage the following IBM Products:
