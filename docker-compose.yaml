@@ -91,3 +91,20 @@ services:
     environment:
       MP_MESSAGING_OUTGOING_LFTX_ADDRESS: DEV.QUEUE.1
       AMQP_HOST: ibmmq
+  kconnect: 
+    hostname: kconnect
+    container_name: kconnect
+    image: quay.io/ibmcase/eda-kconnect-cluster-image
+    ports:
+      - 8083:8083
+    volumes:
+      - ./environments/local/kconnect:/tmp
+    command: [
+      "sh", "-c",
+      "export LOG_DIR=/tmp &&
+      bin/connect-distributed.sh /tmp/distributed.properties"
+    ]
+    depends_on:
+      - kafka
+volumes:
+  qm1data:

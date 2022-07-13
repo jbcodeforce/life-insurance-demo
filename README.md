@@ -1,4 +1,4 @@
-# A simple demonstration for Life insurance client domain
+# [A simple demonstration for Life insurance client domain]()
 
 This repository includes a simple example of how to integrate with a MQ system processing messages in life insurance domain, and plug eventing into the architecture with minimum disruption.
 
@@ -26,6 +26,26 @@ You need docker engine.
 ```sh
 docker-compose up -d
 ```
+
+ 1. Go to the simulator UI
+
+        ```sh
+        chrome http://localhost:8080/
+        ```
+
+1. Go to IBM MQ console to verify messages in Queue, with user: admin/passw0rd
+
+    ```sh
+        chrome https://localhost:9443  
+    ```
+
+    You may not see the messages if they were already consumed by the Kafka Connector
+
+1. Verify messages are in the items topics
+
+        ```sh
+    chrome http://localhost:9000/
+    ```
 
 ## Deploy to an Existing OpenShift with CP4I install
 
