@@ -73,6 +73,7 @@ services:
         - '1414:1414'
         - '9443:9443'
         - '9157:9157'
+        - '5672:5672'
     volumes:
         - qm1data:/mnt/mqm
     stdin_open: true

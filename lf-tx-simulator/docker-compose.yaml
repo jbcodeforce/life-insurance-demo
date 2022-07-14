@@ -2,6 +2,7 @@ version: '3.7'
 services:
   ibmmq:
     image: quay.io/ibmcase/ibm-mqadvanced-server-dev:9.2.4.0-amd64
+    # image: icr.io/ibm-messaging/mq:9.2.5.0-r1
     container_name: ibmmq
     hostname: ibmmq
     ports:
