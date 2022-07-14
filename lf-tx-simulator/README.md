@@ -22,11 +22,10 @@ docker compose up -d
 ./mvnw compile quarkus:dev
 ```
 
-
 > **_NOTE:_**  Quarkus Dev UI,is at http://localhost:8080/q/dev/.  Swagger Quarkus Dev UI,is at http://localhost:8080/q/swagger-ui
 
 * Use the e2e script to send a new client to the REST end point, and see the message in DEV.QUEUE.1 in the MQ console at 
-https://localhost:9443/  admin user passw0rd
+https://localhost:9443/  admin  passw0rd
 ## Packaging and running the application
 
 The application can be packaged using:

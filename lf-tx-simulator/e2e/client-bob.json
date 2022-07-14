@@ -7,8 +7,9 @@
         "first_name": "bob",
         "last_name": "thebuilder",
         "address": "1 main street, CA, San Franciso",
-        "phone": null,
-        "mobile": null,
+        "phone": "650-650-650",
+        "mobile": "",
         "email": "bobbuilder@email.com"
-    }
+    }, 
+    "client_category_id": 0
 }

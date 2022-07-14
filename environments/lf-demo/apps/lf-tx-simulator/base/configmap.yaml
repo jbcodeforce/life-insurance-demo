@@ -4,8 +4,12 @@ metadata:
   name: lf-tx-simulator-cm
 data:
   APP_VERSION: 0.0.1
-  MP_MESSAGING_OUTGOING_LFTX_ADDRESS: RAWTX
-  AMQP_HOST: ibmmq.lf-demo.svc
+  MQ_HOST: lf-demo-mq-ibm-mq.lf-demo.svc
+  # external: mq1-cp4i-ibm-mq-qm-cp4i-mq1.apps.biggs.coc-ibm.com
+  MQ_PORT: "1414"
+  MQ_QMGR: QM1 
+  MQ_QUEUE_NAME: RAWTX
+  MQ_CHANNEL: DEV.APP.SVRCONN
   
 
   

@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -17,11 +18,11 @@ import javax.ws.rs.core.MediaType;
 import org.acme.domain.Client;
 import org.acme.domain.ClientCategory;
 import org.acme.domain.ClientRelationType;
+import org.acme.infra.messages.MQProducer;
 import org.acme.infra.messages.TransactionEvent;
 import org.acme.infra.repo.ClientRepository;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
 
+import io.quarkus.runtime.StartupEvent;
 import io.smallrye.mutiny.Multi;
 
 
@@ -32,37 +33,30 @@ import io.smallrye.mutiny.Multi;
 public class ClientResource {
     private static final Logger logger = Logger.getLogger(ClientResource.class.getName());
 
-    @Channel("lftx")
-    Emitter<TransactionEvent> transactionEmitter; 
+    @Inject
+    MQProducer transactionEmitter; 
 
     @Inject
     ClientRepository clientRepository;
 
 
     @POST
-    @Produces(MediaType.TEXT_PLAIN)
-    public String createNewClient(Client client) {
+    public Client createNewClient(Client client) {
         logger.info("In createNewClient client: " + client.toString());
          // todo add persistence 
         UUID uuid = UUID.randomUUID();
         client.id = uuid.toString();
-        TransactionEvent tx = new TransactionEvent();
-        tx.type = TransactionEvent.TX_CLIENT_CREATED;
-        tx.payload = client; 
-        transactionEmitter.send(tx);
-        return client.id;
+        transactionEmitter.send(client,true);
+        return client;
     }
 
     @PUT
-    @Produces(MediaType.TEXT_PLAIN)
-    public String updateClient(Client client) {
+    public Client updateClient(Client client) {
         logger.info("In updateClient client: " + client.toString());
         // todo add persistence 
-        TransactionEvent tx = new TransactionEvent();
-        tx.type = TransactionEvent.TX_CLIENT_UPDATED;
-        tx.payload = client; 
-        transactionEmitter.send(tx);
-        return client.id;
+        
+        transactionEmitter.send(client,false);
+        return client;
     }
 
     @GET
@@ -78,5 +72,9 @@ public class ClientResource {
     public Multi<ClientRelationType> getRelationTypes(){
         List<ClientRelationType> l = clientRepository.getRelationTypes();
         return Multi.createFrom().items(l.stream());
+    }
+
+    public void onStart(@Observes StartupEvent ev) {
+        transactionEmitter.preProcessing();
     }
 }
