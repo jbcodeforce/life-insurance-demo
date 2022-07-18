@@ -1,7 +1,5 @@
 package org.acme.infra.messages;
 
-import java.util.Date;
-
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
@@ -11,7 +9,7 @@ public class TransactionEvent {
 
     public String txid;
     public String type;
-    public Date timestamp;
+    public long timestamp;
     public Object payload;
 
     public TransactionEvent() {}

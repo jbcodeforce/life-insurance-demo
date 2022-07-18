@@ -1,4 +1,4 @@
-apiVersion: eventstreams.ibm.com/v1alpha1
+apiVersion: eventstreams.ibm.com/v1beta2
 kind: KafkaConnector
 metadata:
   name: mq-source
@@ -13,17 +13,17 @@ spec:
   tasksMax: 1
   config:
     mq.queue.manager: QM1
-    mq.connection.name.list: tx-mq-ibm-mq.lf-demo.svc
+    mq.connection.name.list: lf-demo-mq-ibm-mq.lf-demo.svc
     mq.channel.name: DEV.APP.SVRCONN
     mq.queue: RAWTX
     mq.user.name: ""
     mq.password: ""
     # The maximum number of messages in a batch. A batch uses a single unit of work. Default 250
-    mq.bath.size: 250
+    # mq.bath.size: 250
     producer.override.acks: 1
     topic: lf-raw-tx
     key.converter: org.apache.kafka.connect.storage.StringConverter
-    value.converter: org.apache.kafka.connect.converters.ByteArrayConverter
+    value.converter: org.apache.kafka.connect.storage.StringConverter
     mq.record.builder: com.ibm.eventstreams.connect.mqsource.builders.DefaultRecordBuilder
     mq.connection.mode: client
     mq.message.body.jms: true

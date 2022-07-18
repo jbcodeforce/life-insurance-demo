@@ -2,19 +2,19 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/version: 0.0.1
+    app.kubernetes.io/version: 0.0.3
     app.kubernetes.io/name: lf-tx-simulator
   name: lf-tx-simulator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/version: 0.0.1
+      app.kubernetes.io/version: 0.0.3
       app.kubernetes.io/name: lf-tx-simulator
   template:
     metadata:
       labels:
-        app.kubernetes.io/version: 0.0.1
+        app.kubernetes.io/version: 0.0.3
         app.kubernetes.io/name: lf-tx-simulator
     spec:
       containers:
@@ -35,7 +35,7 @@ spec:
         envFrom:
         - configMapRef:
             name: lf-tx-simulator-cm
-        image: quay.io/jbcodeforce/lf-tx-simulator
+        image: quay.io/jbcodeforce/lf-tx-simulator:0.0.3
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 3

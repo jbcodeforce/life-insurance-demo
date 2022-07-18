@@ -38,6 +38,20 @@ metadata:
           productCloudpakRatio: "2:1"
 ```
 
+## The Kconnect image update
+
+The KConnect image definition is done in the [eda-rt-inventory-gitops project](https://github.com/ibm-cloud-architecture/eda-rt-inventory-gitops) kconnect folder.
+
+The commands to run from this folder
+
+```sh
+export IMAGE_NAME=quay.io/ibmcase/eda-kconnect-cluster-image 
+export TAG=latest
+docker build -t ${IMAGE_NAME}:${TAG} .
+docker tag ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:latest
+docker push ${IMAGE_NAME}:${TAG}
+docker push ${IMAGE_NAME}:latest
+```
 
 ## Deploy the Kafka connect cluster
 
@@ -45,12 +59,4 @@ metadata:
 oc apply -f kafka-connect.yaml
 # Verify cluster is ready
 oc get kafkaconnect
-```
-
-## Deploy connector
-
-Get the Connect Cluster route
-
-```sh
-oc apply -f kafka-connector.yaml
 ```

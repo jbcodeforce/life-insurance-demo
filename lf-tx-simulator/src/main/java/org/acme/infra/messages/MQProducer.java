@@ -1,6 +1,7 @@
 package org.acme.infra.messages;
 
 import java.io.File;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -77,6 +78,7 @@ public class MQProducer {
 
 
   public void send(Client client, boolean newClient) {
+    logger.info("MQ produce msg with id " + client.id);
     try {
       TransactionEvent tx = new TransactionEvent();
       if (newClient) {
@@ -85,13 +87,14 @@ public class MQProducer {
         tx.type = TransactionEvent.TX_CLIENT_UPDATED;
       }
         
-        tx.payload = client; 
-        tx.txid = client.id;
+      tx.payload = client; 
+      tx.txid = client.id;
+      tx.timestamp = new Date().getTime();
       String msg = parser.writeValueAsString(tx);
       TextMessage message = jmsContext.createTextMessage(msg);
-      message.setJMSCorrelationID(tx.txid);
+      message.setJMSCorrelationID(client.id);
       producer.send(destination, message);
-      logger.info("sent to MQ:" + msg);
+      logger.info("sent to MQ:" + message.toString() + " with correlation ID " + message.getJMSCorrelationID());
     } catch (Exception e) {
       if (e != null) {
         if (e instanceof JMSException) {

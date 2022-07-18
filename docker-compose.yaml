@@ -43,6 +43,7 @@ services:
     entrypoint: [ "bash",  "-c", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-raw-tx 
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-dlq 
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-tx-a
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-categories
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-tx-b"]
   kafdrop:
     image: obsidiandynamics/kafdrop
@@ -86,7 +87,7 @@ services:
         MQ_ENABLE_METRICS: "true"
   tx_simul:
     container_name: tx_simul
-    image: quay.io/jbcodeforce/lf-tx-simulator
+    image: quay.io/jbcodeforce/lf-tx-simulator:0.0.3
     ports:
       - '8080:8080'
     environment:

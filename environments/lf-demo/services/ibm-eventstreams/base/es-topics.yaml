@@ -65,3 +65,20 @@ spec:
     min.insync.replicas: 1
     cleanup.policy: delete
     delete.retention.ms: 86400000
+
+--- 
+
+apiVersion: eventstreams.ibm.com/v1beta2
+kind: KafkaTopic
+metadata:
+  name: lf-categories
+  namespace: lf-demo
+  labels:
+    eventstreams.ibm.com/cluster: dev
+spec:
+  partitions: 1
+  replicas: 3
+  config:
+    min.insync.replicas: 1
+    cleanup.policy: compact
+    delete.retention.ms: 86400000

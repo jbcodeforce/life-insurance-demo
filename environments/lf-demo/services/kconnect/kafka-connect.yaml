@@ -6,12 +6,12 @@ metadata:
   annotations:
     eventstreams.ibm.com/use-connector-resources: "true"
 spec:
-  version: 3.2.0
   replicas: 1
   bootstrapServers: dev-kafka-bootstrap.lf-demo.svc:9092
-  image: quay.io/ibmcase/eda-kconnect-cluster-image:latest
+  image: quay.io/ibmcase/eda-kconnect-cluster-image:11.0.2
   template:
     pod:
+      tmpDirSizeLimit: 100Mi
       imagePullSecrets: []
       metadata:
         annotations:
@@ -26,41 +26,21 @@ spec:
           cloudpakVersion: 2022.2.1
           productCloudpakRatio: "2:1"
   config:
-    group.id: connect-cluster
-    offset.storage.topic: connect-cluster-offsets
-    config.storage.topic: connect-cluster-configs
-    status.storage.topic: connect-cluster-status
+    group.id: eda-connect-cluster
+    offset.storage.topic: eda-connect-cluster-offsets
+    config.storage.topic: eda-connect-cluster-configs
+    status.storage.topic: eda-connect-cluster-status
     config.storage.replication.factor: 3
+    offset.storage.cleanup.policy: compact
     offset.storage.replication.factor: 3
     status.storage.replication.factor: 3
-    
-  externalConfiguration:
-    env:
-      - name: IBM_COS_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: cos-creds
-            key: cos.api.key
-      - name: IBM_COS_BUCKET_LOCATION
-        valueFrom:
-          secretKeyRef:
-            name: cos-creds
-            key: cos.bucket.location
-      - name: IBM_COS_BUCKET_NAME
-        valueFrom:
-          secretKeyRef:
-            name: cos-creds
-            key: cos.bucket.name
-      - name: IBM_COS_RESILIENCY
-        valueFrom:
-          secretKeyRef:
-            name: cos-creds
-            key: cos.bucket.resiliency
-      - name: IBM_COS_CRM
-        valueFrom:
-          secretKeyRef:
-            name: cos-creds
-            key: cos.service.crn
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
 #  tls:
 #    trustedCertificates:
 #      - secretName: quickstart-cluster-ca-cert

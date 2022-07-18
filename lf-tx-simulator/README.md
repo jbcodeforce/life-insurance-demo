@@ -31,8 +31,8 @@ https://localhost:9443/  admin  passw0rd
 The application can be packaged using:
 
 ```shell script
-./script/buildAll.sh
+./script/buildAll.sh 0.0.3
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory, build a docker image and push it to quay.io
+It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory, build a docker image and push it to `quay.io/jbcodeforce`
 
