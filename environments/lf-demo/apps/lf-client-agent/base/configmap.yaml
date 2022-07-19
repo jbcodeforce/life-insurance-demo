@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lf-client-agent-cm
+data:
+  KAFKA_APPLICATION_ID: lf-client-agent
+  KAFKA_SECURITY_PROTOCOL: SSL
+  KAFKA_BOOTSTRAP_SERVERS: dev-kafka-bootstrap.lf-demo.svc:9093

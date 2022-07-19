@@ -25,7 +25,7 @@ Also note, that to be generic this framework defines different mesage type (600)
 The solution in on bare metal or VM running on premise.
 ## Requirements to demonstrate
 
-* Address how to extend existing architecture with Kafka based middleware and streaming processing
+* Address how to extend existing architecture with Kafka based middleware and streaming processing. (See [next section](/#example-of-non-desruptive-integration))
 * Demonstrate streaming processing with the exactly once delivery
 * Ensure Event order is not changed: in the queuing approach with subscription, it is possible that a message arrived after another one could be processed before the first one is completed, which could impact data integrity.
 * Demonstrate Data transformation to target different models, to prepare the data for a specific subscriber (a kafka consumer)
@@ -50,25 +50,7 @@ The existing framework can be extended by adding Kafka MQ source and sink connec
     * Kafka [MQ Source connector lab](https://ibm-cloud-architecture.github.io/refarch-eda/use-cases/connect-mq/)
 ## Domain model
 
-We can use a simple client model to define a life insurance client that can have different benifeciary or transfer the life insurance to other persons. The model can be see as:
-
-![](./images/lf-model.png)
-
-Life insurance policy can be transferred to a family member or someone else, therefore the model stores not only information about the client to whom the policy belongs but also information about any related people and their relationship to the client.
-
-Client information is in `Person` objecr, but also as a `Client`. Other people related to the client to whom the policy may be transferred or who may receive the policy benefit upon the client’s death are also `Person`s.
-
-Client Category is to be able to classify client for marketing reason based on demographics and financial details.
-
-The remaining two classes are needed for describing the nature of the relationship between clients and other people.  Relation types is stored in the `ClientRelationType`. 
-
-The `ClientRelated` instances store references to the client (client_id), the related person (person_id), the nature of that relation (client_relation_type_id), all addition details (details), if any, and a flag indicating whether the relation is currently active (is_active).
-
-The java classes for this model are in the `lf-tx-simulator` project.
-
-In the future, can extend this model with the Life Insurance offer and product.
-
-Model inspiration is coming from [Vertabelo blog](https://vertabelo.com/blog/life-insurance-data-model/)
+[See the design section](./design/#simple-domain-model-for-client)
 ## Components 
 
 We will leverage the following IBM Products:
@@ -76,19 +58,15 @@ We will leverage the following IBM Products:
 * Event Streams with one cluster definition is in [this eventstreams-dev yaml](https://github.com/jbcodeforce/life-insurance-demo/blob/main/environments/lf-demo/services/ibm-eventstreams/base/eventstreams-dev.yaml)
 * MQ broker with AMQP protocol enabled (See [this folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/services/ibm-mq/base) for deployment example)
 * [Kafka Connector](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/services/kconnect)
-* [Event end point management]()
-* Schema registry
+* [Event end point management](https://www.ibm.com/docs/en/cloud-paks/cp-integration/2022.2?topic=integrations-socializing-your-kafka-event-sources)
+* [Schema registry](https://ibm.github.io/event-streams/schemas/overview/)
 
 And develop three components:
 
-* A transaction simulator to send data to MQ to support different demonstration goals. The app is done in Java reactive messaging using AMQP protocol
-* a Kafka streaming processing
-* Configuration for MQ source connector
-### Transaction Simulator as source to MQ
+* A transaction simulator to send data to MQ to support different demonstration goals. The app is done in Java Messaging Service in [lf-tx-simulator folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/lf-tx-simulator). 
+* a Kafka streaming processing using standard Java Kafka Streams API. The application is in [client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/client-event-processing) 
+* Configuration for MQ source connector. The Yaml file is in [environments mq-source folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/mq-source)
 
-The code is under the folder [lf-tx-simulator](https://github.com/jbcodeforce/life-insurance-demo/tree/main/lf-tx-simulator).
-
-![](./images/tx-simulator.png) 
 
 ???- "More reading"
     * [Building reactive Java apps with Quarkus and IBM MQ](https://developer.ibm.com/tutorials/mq-building-cloud-native-reactive-java-messaging-applications/)

@@ -9,23 +9,20 @@ ES_VERSION=v11.0
 # Entry points
 # ------------------------------------------------------- 
 
-all: create_ns
-	@oc project $$DEV_NS 
-	eventstreams_config
-	mq_config
-	kafka_connect
-	start_mq_source
-	apps
+all: create_ns change_ns eventstreams_config mq_config 	kafka_connect 	start_mq_source 	apps
 
 create_ns:
 	@oc apply -k ./lf-demo/env/overlays
 	@echo "\n---------------------------"
 	@echo "ls-demo project created.\n\n"
 
+change_ns:
+	@oc project $$DEV_NS 
+
 eventstreams_config:
 	@echo "\n------------------------------------------------"
 	@echo "Create dev Event Streams cluster in lf-demo project"
-	@echo "\n------------------------------------------------\n"
+	@echo "------------------------------------------------\n"
 	@oc apply -k ./lf-demo/services/ibm-eventstreams/overlays
 
 
@@ -49,16 +46,21 @@ start_mq_source:
 	@echo "\n------------------------------------------------\n"
 	@oc apply -f ./lf-demo/apps/mq-source/kafka-mq-src-connector.yaml -n $(DEV_NS)
 
-apps: tx_simulator
+apps: tx_simulator tx_client-agent
 
 tx_simulator:
 	@oc apply -k ./lf-demo/apps/lf-tx-simulator/overlays
 
+tx_client-agent:
+	@oc apply -k ./lf-demo/apps/lf-client-agent/overlays
+
 clean:  clean_jobs 
 	@oc delete -k ./lf-demo/apps/lf-tx-simulator/overlays
 	@oc delete -f ./lf-demo/apps/mq-source/kafka-mq-src-connector.yaml
+	@oc delete -f ./lf-demo/services/kconnect/kafka-connect.yaml
 	@oc delete -k ./lf-demo/services/ibm-mq/overlays
 	@oc delete -k ./lf-demo/services/ibm-eventstreams/overlays
+
 
 
 clean_jobs:

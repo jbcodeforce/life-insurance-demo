@@ -61,12 +61,9 @@ docker-compose up -d
     ```sh
     cd environments
     make all
-    ```
+    ``` 
 
-    You should get the following outcome:
-
-    ```
-    ```
+    See more detail in [this section]()
 
 1. Verify your environments
 
