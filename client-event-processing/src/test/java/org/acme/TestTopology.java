@@ -13,6 +13,7 @@ import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.Person;
 import org.acme.infra.events.TransactionEvent;
 import org.acme.infra.events.TransactionEventSerdes;
+import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -37,16 +38,15 @@ import org.junit.jupiter.api.TestMethodOrder;
  */
 //@QuarkusTest
 @TestMethodOrder(OrderAnnotation.class)
-public class TestTopologySecond {
+public class TestTopology {
 
     private  static TopologyTestDriver testDriver;
-    //private  static TestInputTopic<String, ItemTransaction> inputTopic;
     private  static TestInputTopic<String, TransactionEvent> inputTopic;
     private  static TestInputTopic<Integer, ClientCategory> categoriesTopic;
-    //private  static TestOutputTopic<String, ItemTransaction> outputTopic;
+
     private  static TestOutputTopic<String, ClientOutput> outputTopicA;
     private  static TestOutputTopic<String, ClientOutput> outputTopicB;
-
+    private  static TestOutputTopic<String, TransactionEvent> dlqTopic;
     private static TransactionProcessingAgent agent;
     
   
@@ -73,14 +73,21 @@ public class TestTopologySecond {
     @BeforeAll
     public  static void setup() {
         agent = new TransactionProcessingAgent();
+        agent.categoriesInputStreamName = "lf-categories";
+        agent.transactionsInputStreamName = "lf-transactions";
+        agent.transactionsToAOutputStreamName = "lf-tx-a";
+        agent.transactionsToBOutputStreamName = "lf-tx-b";
+        agent.dlqOutputStreamName = "lfdlq";
         Topology topology = agent.buildProcessFlow();
         testDriver = new TopologyTestDriver(topology, getStreamsConfig());
 
         System.out.println(topology.describe());
-        testDriver = new TopologyTestDriver(topology, getStreamsConfig());
         inputTopic = testDriver.createInputTopic(agent.transactionsInputStreamName, new StringSerializer(), TransactionEventSerdes.TransactionSerde().serializer());
+        categoriesTopic = testDriver.createInputTopic(agent.categoriesInputStreamName, new IntegerSerializer(), TransactionEventSerdes.ClientCategorySerde().serializer());
+       
         outputTopicA = testDriver.createOutputTopic(agent.transactionsToAOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
         outputTopicB = testDriver.createOutputTopic(agent.transactionsToBOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
+        dlqTopic = testDriver.createOutputTopic(agent.dlqOutputStreamName, new StringDeserializer(),  TransactionEventSerdes.TransactionSerde().deserializer());
 
     }
 
@@ -113,88 +120,61 @@ public class TestTopologySecond {
      }
 
 
-     @Test
-     @Order(2)
-     public void loadCategory() {
-        ClientCategory c1 = new ClientCategory(1, "Person");
+     private void sendCategories(){
+        ClientCategory c1 = new ClientCategory(1, "Personal");
         categoriesTopic.pipeInput(c1.id,c1);
         ClientCategory c2 = new ClientCategory(2, "Business");
         categoriesTopic.pipeInput(c2.id,c2);
+     }
+
+     @Test
+     @Order(2)
+     public void loadCategory() {
+        sendCategories();
         assertThat(outputTopicA.isEmpty(), is(true));
-        KeyValueStore<Integer,ValueAndTimestamp<ClientCategory>> store = testDriver.getTimestampedKeyValueStore(agent.CATEGORY_STORE_NAME);
+        KeyValueStore<Integer,ValueAndTimestamp<ClientCategory>> store = testDriver.getTimestampedKeyValueStore(TransactionProcessingAgent.CATEGORY_STORE_NAME);
         Assertions.assertNotNull(store);
 
-        ValueAndTimestamp<ClientCategory> record1 = store.get(1);
+        ValueAndTimestamp<ClientCategory> record1 = store.get(Integer.valueOf(1));
         Assertions.assertNotNull(record1);
-        Assertions.assertEquals("Person", record1.value());
+        Assertions.assertEquals("Personal", record1.value().category_name);
         Assertions.assertEquals(2, store.approximateNumEntries());
      }
 
 
      @Test
      @Order(3)
-     public void sendOneTransaction(){
-         Person p = new Person( 1, "Poo1", "Bilquees", "Kawoosa" );
-         Client c = new Client("c1","c001", p, 3);
+     public void shouldGetEnrichedAndTransformedTransaction() {
+         sendCategories();
+         Person p1 = new Person( 1, "Poo1", "Bilquees", "Kawoosa" );
+         Client c1 = new Client("c1","c001", p1, 2);
 
-         TransactionEvent tx = new TransactionEvent();
-         tx.txid = c.id;
-         tx.payload = c;
-         inputTopic.pipeInput(tx.txid, tx);
+         TransactionEvent tx1 = new TransactionEvent();
+         tx1.txid = c1.id;
+         tx1.payload = c1;
+         tx1.type = TransactionEvent.TX_CLIENT_CREATED;
+         inputTopic.pipeInput(tx1.txid, tx1);
 
-         Person p1 = new Person( 2, "Poo2", "Jane", "Doe" );
-         Client c1 = new Client("c2","c002", p1, 4);
-
-         TransactionEvent tx2 = new TransactionEvent();
-         tx2.txid = c1.id;
-         tx2.payload = c1;
-         inputTopic.pipeInput(tx2.txid, tx2);
-/* 
-         assertThat(outputTopicA.getQueueSize(), equalTo(1L) );
          ClientOutput filteredItem = outputTopicA.readValue();
-         assertThat(filteredItem.client_category_name, equalTo("Business"));
+         Assertions.assertEquals("Bilquees",filteredItem.first_name);
+    }
 
+    @Test
+    public void shouldHaveFaultyTransactionMovedToDLQ() {
+        sendCategories();
+        Person p2 = new Person( 2, "Poo2", "Jane", "Doe" );
+        Client c2 = new Client("c2","c002", p2, -1);
 
-        assertThat(outputTopicB.getQueueSize(), equalTo(1L) );
-        filteredItem = outputTopicB.readValue();
-        assertThat(filteredItem.client_category_name, equalTo("Personal"));
-*/
-         }
+        TransactionEvent tx2 = new TransactionEvent();
+        tx2.txid = c2.id;
+        tx2.payload = c2;
+        tx2.type = TransactionEvent.TX_CLIENT_CREATED;
+        inputTopic.pipeInput(tx2.txid, tx2);
 
-     /**
-     @Test
-     @Order(3)
-     public void nullStoreNameRecordShouldGetNoOutputMessage() {
-     Person p = new Person( 1, "Poo1", "Bilquees", "Kawoosa" );
-     Client c = new ItemTransaction(null,"Item-1",ItemTransaction.RESTOCK,5,33.2);
-     inputTopic.pipeInput(item.storeName, item);
-     assertThat(outputTopic.isEmpty(), is(true));
-     }
-
-     @Test
-     @Order(4)
-     public void emptyStoreNameRecordShouldGetNoOutputMessage() {
-     ItemTransaction item = new ItemTransaction("","Item-1",ItemTransaction.RESTOCK,5,33.2);
-     inputTopic.pipeInput(item.storeName, item);
-     assertThat(outputTopic.isEmpty(), is(true));
-     }
-
-     @Test
-     @Order(5)
-     public void nullSkuRecordShouldGetNoOutputMessage(){
-     //assertThat(outputTopic.getQueueSize(), equalTo(0L) );
-
-     ItemTransaction item = new ItemTransaction("Store-1",null,ItemTransaction.RESTOCK,5,33.2);
-     inputTopic.pipeInput(item.storeName, item);
-     assertThat(outputTopic.isEmpty(), is(true));
-     }
-
-     @Test
-     @Order(6)
-     public void emptySkuRecordShouldGetNoOutputMessage(){
-     ItemTransaction item = new ItemTransaction("Store-1","",ItemTransaction.RESTOCK,5,33.2);
-     inputTopic.pipeInput(item.storeName, item);
-     assertThat(outputTopicA.isEmpty(), is(true));
-     }**/
+        Assertions.assertEquals(1,dlqTopic.getQueueSize() );
+        TransactionEvent txOut = dlqTopic.readValue();
+        Assertions.assertEquals("c2",txOut.txid);
+   }
+  
 
 }

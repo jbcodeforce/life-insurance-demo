@@ -1,16 +1,24 @@
 package org.acme.domain;
 
+import java.util.Map;
+
 import javax.inject.Singleton;
 
+import org.acme.infra.events.Client;
+import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.TransactionEvent;
 import org.acme.infra.events.TransactionEventSerdes;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Named;
+import org.apache.kafka.streams.kstream.ValueJoiner;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -40,32 +48,83 @@ public class TransactionProcessingAgent {
         // instance with one of the static factory methods on the Stores class.
         // all persistent StateStore instances provide local storage using RocksDB
         KeyValueBytesStoreSupplier storeSupplier = Stores.persistentKeyValueStore(CATEGORY_STORE_NAME);
-
+        CategoryClientJoiner joiner = new CategoryClientJoiner();
+        // key: transaction_id, client transaction as value
         KStream<String, TransactionEvent> transactions = builder.stream(transactionsInputStreamName,
                                                         Consumed.with(Serdes.String(),  
                                                         TransactionEventSerdes.TransactionSerde()));
 
-        KTable<String, ClientCategory> categories = builder.table(categoriesInputStreamName,
-                                                        Consumed.with(Serdes.String(),  
+        // key the category id and the value is the description of the category
+        KTable<Integer, ClientCategory> categories = builder.table(categoriesInputStreamName,
+                                                        Consumed.with(Serdes.Integer(),  
                                                         TransactionEventSerdes.ClientCategorySerde()),  Materialized.as(storeSupplier));
         
+        // First validate we have good data in the input transaction if not route to dlq
+        Map<String, KStream<String, TransactionEvent>> branches = transactions.split(Named.as("A-"))
+        .branch((k,v) -> transactionNotValid(v), Branched.as("error"))
+        .defaultBranch(Branched.as("good-data"));
         
-        /* 
-        KStream<String, ClientOutput> clientOut = transactions.flatMapValues(mapper);
-        Map<String, KStream<String, TransactionEvent>> branches = transactions.split(Named.as("B-"))
-        .branch((k,v) ->
-                        (v.client_category_name != null && v.client_category_name.equals("Business")),
-                Branched.as("categorya-tx")
-        )
-        .branch((k,v) ->
-                        (v.client_category_name != null && v.client_category_name.equals("Personal")),
-                Branched.as("categoryb-tx")
-        ).defaultBranch(Branched.as("wrong-tx"));
-            branches.get("B-categorya-tx").to(outTopicNameA);
-            branches.get("B-categoryb-tx").to(outTopicNameB);
-            branches.get("B-wrong-tx").to(deadLetterTopicName);
-        */
+        // error records go to dead letter queue
+        branches.get("A-error")
+        .to(dlqOutputStreamName);
+
+        // process good record
+        Map<String, KStream<String, ClientOutput>> clientOut = branches.get("A-good-data")
+        // transform to the target event model
+        .mapValues(v ->  buildClientOutput(v) )
+        // lookup the category id with the category table - so use the category.id as key
+        .selectKey( (k,v) -> v.client_category_id)
+        .leftJoin(categories,
+                        //When you join a stream and a table, you get a new stream
+                        joiner
+                )
+        .selectKey( (k,v) -> v.client_id)     
+        .split(Named.as("B-"))
+        .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Personal"), Branched.as("category-b"))
+        .defaultBranch(Branched.as("category-a"));
+
+        clientOut.get("B-category-a").to(transactionsToAOutputStreamName);
+        clientOut.get("B-category-b").to(transactionsToBOutputStreamName);
         return builder.build();
+    }
+
+
+    private ClientOutput buildClientOutput(TransactionEvent v) {
+        ClientOutput co = new ClientOutput();
+        if (v.type.equals(TransactionEvent.TX_CLIENT_CREATED) || v.type.equals(TransactionEvent.TX_CLIENT_UPDATED)) {
+            Client c = (Client)v.payload;
+            co.client_code = c.code;
+            co.client_id = c.id;
+            co.client_category_id = c.client_category_id;
+            co.email = c.insuredPerson.email;
+            co.first_name = c.insuredPerson.first_name;
+            co.last_name = c.insuredPerson.last_name;
+            co.mobile = c.insuredPerson.mobile;
+            co.phone = c.insuredPerson.phone;
+            co.address=c.insuredPerson.address;
+        }
+        return co;
+    }
+
+    private boolean transactionNotValid(TransactionEvent v) {
+        if (v.type == null) return false;
+        if (v.type.equals(TransactionEvent.TX_CLIENT_CREATED) || v.type.equals(TransactionEvent.TX_CLIENT_UPDATED)) {
+            Client c = (Client)v.payload;
+            if (c.client_category_id <= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public class CategoryClientJoiner implements ValueJoiner<ClientOutput,ClientCategory,ClientOutput> {
+
+        @Override
+        public ClientOutput apply(ClientOutput clientIN, ClientCategory category) {
+            clientIN.client_category_name = category.category_name;
+            return clientIN;
+        }
+        
     }
 }
 

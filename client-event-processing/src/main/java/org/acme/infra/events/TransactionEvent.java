@@ -10,7 +10,7 @@ public class TransactionEvent {
     public String txid;
     public String type;
     public long timestamp;
-    public Object payload;
+    public Client payload;
 
     public TransactionEvent() {}
 }

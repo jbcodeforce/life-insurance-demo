@@ -1,8 +1,14 @@
 package org.acme.infra.events;
 
+
+/**
+ * The Client output is a flatten and enriched event from the TransactionEvent, Client and Person information
+ * this is to illustrate a common pattern of data transformation
+ */
 public class ClientOutput {
     public String client_id;
     public String client_code;
+    public Integer client_category_id;
     public String client_category_name;
     public String first_name;
     public String last_name;
@@ -19,9 +25,6 @@ public class ClientOutput {
         this.client_code = c.code;
         this.first_name = p.first_name;
         this.last_name = p.last_name;
-        this.client_category_name = "Business";
     }
-
-
 
 }
