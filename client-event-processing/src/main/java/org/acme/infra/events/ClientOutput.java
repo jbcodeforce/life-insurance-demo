@@ -1,4 +1,4 @@
-package org.acme.domain;
+package org.acme.infra.events;
 
 public class ClientOutput {
     public String client_id;

@@ -1,4 +1,4 @@
-import org.eclipse.microprofile.reactive.messaging.Incoming;
+package org.acme.infra;
 
 import javax.enterprise.context.ApplicationScoped;
 

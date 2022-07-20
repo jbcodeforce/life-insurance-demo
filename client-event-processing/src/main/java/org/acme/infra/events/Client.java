@@ -1,4 +1,4 @@
-package org.acme.domain;
+package org.acme.infra.events;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 

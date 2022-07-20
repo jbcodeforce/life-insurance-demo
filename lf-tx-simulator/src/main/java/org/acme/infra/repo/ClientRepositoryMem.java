@@ -3,7 +3,9 @@ package org.acme.infra.repo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Singleton;
@@ -42,7 +44,7 @@ public class ClientRepositoryMem implements ClientRepository {
             throw new IllegalAccessError("file not found for clientCategories json");
         try {
             List<ClientCategory> currentDefinitions = mapper.readValue(is, mapper.getTypeFactory().constructCollectionType(List.class, ClientCategory.class));
-            currentDefinitions.stream().forEach( (t) -> clientCategories.put(t.id,t));
+            currentDefinitions.stream().forEach( (t) -> { t.updatedTime = new Date().getTime(); clientCategories.put(t.id,t);});
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -58,5 +60,14 @@ public class ClientRepositoryMem implements ClientRepository {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public ClientCategory saveCategory(ClientCategory cc) {
+        if (cc.id == 0 ) {
+            cc.id = UUID.randomUUID().hashCode();
+        }
+        clientCategories.put(cc.id, cc);
+        return cc;
     } 
 }

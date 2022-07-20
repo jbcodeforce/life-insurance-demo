@@ -1,4 +1,4 @@
-package org.acme.infra;
+package org.acme.infra.events;
 
 import java.io.IOException;
 import java.util.Map;

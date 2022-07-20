@@ -1,4 +1,4 @@
-package org.acme.infra;
+package org.acme.infra.events;
 
 import org.apache.kafka.common.serialization.Serde;
 import org.acme.domain.*;

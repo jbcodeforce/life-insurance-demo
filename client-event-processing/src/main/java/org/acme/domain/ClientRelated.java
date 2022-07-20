@@ -1,5 +1,8 @@
 package org.acme.domain;
 
+import org.acme.infra.events.Client;
+import org.acme.infra.events.Person;
+
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection

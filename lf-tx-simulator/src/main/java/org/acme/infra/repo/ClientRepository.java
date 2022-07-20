@@ -10,4 +10,6 @@ public interface ClientRepository {
     public List<ClientCategory> getListOfCategory();
 
     public List<ClientRelationType> getRelationTypes();
+
+    public ClientCategory saveCategory(ClientCategory cc);
 }

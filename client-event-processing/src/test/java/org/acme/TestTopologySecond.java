@@ -1,83 +1,59 @@
 package org.acme;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.util.Map;
 import java.util.Properties;
 
+import org.acme.domain.ClientCategory;
+import org.acme.domain.TransactionProcessingAgent;
+import org.acme.infra.events.Client;
+import org.acme.infra.events.ClientDetailsSerdes;
+import org.acme.infra.events.ClientOutput;
+import org.acme.infra.events.Person;
+import org.acme.infra.events.TransactionEvent;
+import org.acme.infra.events.TransactionEventSerdes;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.common.serialization.IntegerSerializer;
-import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Branched;
-import org.apache.kafka.streams.kstream.Named;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.acme.domain.*;
-import org.acme.infra.*;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 
 /**
  * Filter out items with no store name or no sku
  */
-
+//@QuarkusTest
+@TestMethodOrder(OrderAnnotation.class)
 public class TestTopologySecond {
 
     private  static TopologyTestDriver testDriver;
     //private  static TestInputTopic<String, ItemTransaction> inputTopic;
-    private  static TestInputTopic<String, ClientOutput> inputTopic;
+    private  static TestInputTopic<String, TransactionEvent> inputTopic;
+    private  static TestInputTopic<Integer, ClientCategory> categoriesTopic;
     //private  static TestOutputTopic<String, ItemTransaction> outputTopic;
     private  static TestOutputTopic<String, ClientOutput> outputTopicA;
     private  static TestOutputTopic<String, ClientOutput> outputTopicB;
-    private static String inTopicName = "input-topic";
-    private static String outTopicNameA = "lf-tx-a";
-    private static String outTopicNameB = "lf-tx-b";
-    private static String deadLetterTopicName = "lf-dlq";
 
-    /**
-     public static Topology buildTopologyFlow(){
-     final StreamsBuilder builder = new StreamsBuilder();
-     // 1- get the input stream
-     KStream<Integer,Client> clients = builder.stream(c,
-     Consumed.with(Serdes.Integer(),  ClientDetailsSerde.ClientSerde()));
-     clients.peek((key, value) -> System.out.println("PRE-FILTER: key=" + key + ", value= {" + value + "}"))
-     .filter((k,v) ->
-     (Integer.valueOf(v.client_category_id) != null && v.client_category_id == 3))
-     .peek((key, value) -> System.out.println("POST-FILTER: key=" + key + ", value= {" + value + "}"))
-     .to(outTopicNameA);
-     clients.filter((k,v) ->
-     (Integer.valueOf(v.client_category_id) != null && v.client_category_id == 4))
-     .peek((key, value) -> System.out.println("POST-FILTER: key=" + key + ", value= {" + value + "}"))
-     .to(outTopicNameB);
-     // 2 filter
+    private static TransactionProcessingAgent agent;
+    
+  
 
-     // Generate to output topic
+/**
+ * 
 
-     return builder.build();
-
-     }**/
-
-    public static Topology buildTopologyFlow() {
-
-        final StreamsBuilder builder = new StreamsBuilder();
-        // 1- get the input stream
-        KStream<String, ClientOutput> clients = builder.stream(inTopicName,
-                Consumed.with(Serdes.String(),  ClientDetailsSerdes.ClientOutputSerde()));
-        // 2 build branches
         Map<String, KStream<String, ClientOutput>> branches = clients.split(Named.as("B-"))
                 .branch((k,v) ->
                                 (v.client_category_name != null && v.client_category_name.equals("Business")),
@@ -91,29 +67,29 @@ public class TestTopologySecond {
         branches.get("B-categoryb-tx").to(outTopicNameB);
         branches.get("B-wrong-tx").to(deadLetterTopicName);
 
-        return builder.build();
-
-    }
+ */
+    
 
     @BeforeAll
-    public static void setup() {
-        Topology topology = buildTopologyFlow();
+    public  static void setup() {
+        agent = new TransactionProcessingAgent();
+        Topology topology = agent.buildProcessFlow();
+        testDriver = new TopologyTestDriver(topology, getStreamsConfig());
+
         System.out.println(topology.describe());
         testDriver = new TopologyTestDriver(topology, getStreamsConfig());
-        inputTopic = testDriver.createInputTopic(inTopicName, new StringSerializer(), ClientDetailsSerdes.ClientOutputSerde().serializer());
-        outputTopicA = testDriver.createOutputTopic(outTopicNameA, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
-        outputTopicB = testDriver.createOutputTopic(outTopicNameB, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
+        inputTopic = testDriver.createInputTopic(agent.transactionsInputStreamName, new StringSerializer(), TransactionEventSerdes.TransactionSerde().serializer());
+        outputTopicA = testDriver.createOutputTopic(agent.transactionsToAOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
+        outputTopicB = testDriver.createOutputTopic(agent.transactionsToBOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
 
     }
 
     public  static Properties getStreamsConfig() {
         final Properties props = new Properties();
-
-
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kstream-labs");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummmy:1234");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,   ClientDetailsSerdes.ClientOutputSerde().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,   TransactionEventSerdes.TransactionSerde().getClass());
         return props;
     }
 
@@ -130,27 +106,50 @@ public class TestTopologySecond {
      * If we do not send message to the input topic there is no message to the output topic.
      */
 
-     //@Test
+     @Test
      @Order(1)
      public void isEmpty() {
-     assertThat(outputTopicA.isEmpty(), is(true));
+        assertThat(outputTopicA.isEmpty(), is(true));
      }
 
-     //@Test
+
+     @Test
      @Order(2)
-     public void sendValidRecord(){
+     public void loadCategory() {
+        ClientCategory c1 = new ClientCategory(1, "Person");
+        categoriesTopic.pipeInput(c1.id,c1);
+        ClientCategory c2 = new ClientCategory(2, "Business");
+        categoriesTopic.pipeInput(c2.id,c2);
+        assertThat(outputTopicA.isEmpty(), is(true));
+        KeyValueStore<Integer,ValueAndTimestamp<ClientCategory>> store = testDriver.getTimestampedKeyValueStore(agent.CATEGORY_STORE_NAME);
+        Assertions.assertNotNull(store);
+
+        ValueAndTimestamp<ClientCategory> record1 = store.get(1);
+        Assertions.assertNotNull(record1);
+        Assertions.assertEquals("Person", record1.value());
+        Assertions.assertEquals(2, store.approximateNumEntries());
+     }
+
+
+     @Test
+     @Order(3)
+     public void sendOneTransaction(){
          Person p = new Person( 1, "Poo1", "Bilquees", "Kawoosa" );
          Client c = new Client("c1","c001", p, 3);
 
-         ClientOutput co = new ClientOutput(c, p);
-         inputTopic.pipeInput(co.client_category_name, co);
+         TransactionEvent tx = new TransactionEvent();
+         tx.txid = c.id;
+         tx.payload = c;
+         inputTopic.pipeInput(tx.txid, tx);
 
          Person p1 = new Person( 2, "Poo2", "Jane", "Doe" );
          Client c1 = new Client("c2","c002", p1, 4);
 
-         ClientOutput co1 = new ClientOutput(c1, p1);
-         inputTopic.pipeInput(co1.client_category_name, co1);
-
+         TransactionEvent tx2 = new TransactionEvent();
+         tx2.txid = c1.id;
+         tx2.payload = c1;
+         inputTopic.pipeInput(tx2.txid, tx2);
+/* 
          assertThat(outputTopicA.getQueueSize(), equalTo(1L) );
          ClientOutput filteredItem = outputTopicA.readValue();
          assertThat(filteredItem.client_category_name, equalTo("Business"));
@@ -159,7 +158,7 @@ public class TestTopologySecond {
         assertThat(outputTopicB.getQueueSize(), equalTo(1L) );
         filteredItem = outputTopicB.readValue();
         assertThat(filteredItem.client_category_name, equalTo("Personal"));
-
+*/
          }
 
      /**

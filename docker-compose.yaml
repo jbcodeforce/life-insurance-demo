@@ -38,13 +38,14 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
   addTopics:
     image:  cp.icr.io/cp/ibm-eventstreams-kafka:11.0.2
+    container_name: addTopics
     depends_on:
       - kafka
     entrypoint: [ "bash",  "-c", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-raw-tx 
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-dlq 
-            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-tx-a
-            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-categories
-            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lt-tx-b"]
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-tx-a
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-categories
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-tx-b"]
   kafdrop:
     image: obsidiandynamics/kafdrop
     container_name: kafdrop
@@ -97,6 +98,16 @@ services:
       MQ_QMGR: QM1 
       MQ_QUEUE_NAME: DEV.QUEUE.1
       MQ_CHANNEL: DEV.APP.SVRCONN
+      CATEGORY_TOPIC: lf-categories
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+      ES_APICURIO_URL: http://apicurio:8091/apis/registry/v2
+      KAFKA_SASL_MECHANISM: PLAIN
+      KAFKA_CERT_PWD: ""
+      USER_CERT_PWD: ""
+    depends_on:
+      - ibmmq
+      - kafka
   kconnect: 
     hostname: kconnect
     container_name: kconnect
@@ -112,5 +123,6 @@ services:
     ]
     depends_on:
       - kafka
+      - ibmmq
 volumes:
   qm1data:

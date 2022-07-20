@@ -19,11 +19,13 @@ import org.acme.domain.Client;
 import org.acme.domain.ClientCategory;
 import org.acme.domain.ClientRelationType;
 import org.acme.infra.messages.MQProducer;
-import org.acme.infra.messages.TransactionEvent;
 import org.acme.infra.repo.ClientRepository;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
 import io.quarkus.runtime.StartupEvent;
 import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
 
 
 @ApplicationScoped
@@ -36,6 +38,10 @@ public class ClientResource {
     @Inject
     MQProducer transactionEmitter; 
 
+    @Channel("categories")
+    @Inject
+    Emitter<ClientCategory> categoryEventEmitter;
+    
     @Inject
     ClientRepository clientRepository;
 
@@ -66,6 +72,21 @@ public class ClientResource {
         return Multi.createFrom().items(l.stream());
     }
 
+    @POST
+    @Path("/categories")
+    public Uni<ClientCategory> createCategory(ClientCategory cc){
+        ClientCategory ncc= clientRepository.saveCategory(cc);
+        categoryEventEmitter.send(ncc);
+        return Uni.createFrom().item(ncc);
+    }
+
+    @PUT
+    @Path("/categories")
+    public Uni<ClientCategory> updateCategory(ClientCategory cc){
+        ClientCategory ncc= clientRepository.saveCategory(cc);
+        categoryEventEmitter.send(ncc);
+        return Uni.createFrom().item(ncc);
+    }
 
     @GET
     @Path("/relationTypes")
@@ -76,5 +97,9 @@ public class ClientResource {
 
     public void onStart(@Observes StartupEvent ev) {
         transactionEmitter.preProcessing();
+        for (ClientCategory category : clientRepository.getListOfCategory()) {
+            categoryEventEmitter.send(category);
+        }
+        
     }
 }
