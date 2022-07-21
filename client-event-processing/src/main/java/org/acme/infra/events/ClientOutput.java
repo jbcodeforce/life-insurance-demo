@@ -5,7 +5,7 @@ package org.acme.infra.events;
  * The Client output is a flatten and enriched event from the TransactionEvent, Client and Person information
  * this is to illustrate a common pattern of data transformation
  */
-public class ClientOutput {
+public class ClientOutput implements JSONSerdeCompatible {
     public String client_id;
     public String client_code;
     public Integer client_category_id;

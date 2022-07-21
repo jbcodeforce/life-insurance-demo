@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class JSONSerde<T> implements Serializer<T>, Deserializer<T>, Serde<T> {
+public class JSONSerde<T extends JSONSerdeCompatible > implements Serializer<T>, Deserializer<T>, Serde<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private String className;
 

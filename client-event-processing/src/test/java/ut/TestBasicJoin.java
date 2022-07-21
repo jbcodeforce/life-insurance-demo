@@ -2,7 +2,7 @@ package ut;
 
 import java.util.Properties;
 
-import org.acme.domain.ClientCategory;
+import org.acme.infra.events.ClientCategory;
 import org.acme.infra.events.ClientDetailsSerdes;
 import org.acme.infra.events.TransactionEventSerdes;
 import org.apache.kafka.common.serialization.IntegerSerializer;

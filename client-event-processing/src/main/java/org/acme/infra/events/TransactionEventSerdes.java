@@ -1,6 +1,5 @@
 package org.acme.infra.events;
 
-import org.acme.domain.ClientCategory;
 import org.apache.kafka.common.serialization.Serde;
 
 public class TransactionEventSerdes {

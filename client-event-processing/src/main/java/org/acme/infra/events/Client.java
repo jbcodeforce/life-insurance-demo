@@ -3,7 +3,7 @@ package org.acme.infra.events;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
-public class Client {
+public class Client implements JSONSerdeCompatible {
     public String id;
     public String code;
     public Person insuredPerson;

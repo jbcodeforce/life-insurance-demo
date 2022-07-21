@@ -3,7 +3,7 @@ package org.acme.infra.events;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
-public class TransactionEvent {
+public class TransactionEvent implements JSONSerdeCompatible {
     public static String TX_CLIENT_CREATED = "ClientCreated";
     public static String TX_CLIENT_UPDATED = "ClientUpdated";
 

@@ -5,6 +5,7 @@ import java.util.Map;
 import javax.inject.Singleton;
 
 import org.acme.infra.events.Client;
+import org.acme.infra.events.ClientCategory;
 import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.TransactionEvent;
 import org.acme.infra.events.TransactionEventSerdes;
@@ -13,14 +14,16 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.ValueJoinerWithKey;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 
 @Singleton
 public class TransactionProcessingAgent {
@@ -41,22 +44,26 @@ public class TransactionProcessingAgent {
     @ConfigProperty(name="app.transactions.dlq.topic", defaultValue = "lf-dlq")
     public String dlqOutputStreamName;
 
+    final static ObjectMapperSerde<ClientOutput> clientOutputSerder = new ObjectMapperSerde<ClientOutput>(ClientOutput.class);
+    final static ObjectMapperSerde<TransactionEvent> transactionEventSerder = new ObjectMapperSerde<TransactionEvent>(TransactionEvent.class);
+    final static ObjectMapperSerde<ClientCategory> categorySerder = new ObjectMapperSerde<ClientCategory>(ClientCategory.class);
+
+    
     public Topology buildProcessFlow() {
         final StreamsBuilder builder = new StreamsBuilder();
         // Adding a state store is a simple matter of creating a StoreSupplier
         // instance with one of the static factory methods on the Stores class.
         // all persistent StateStore instances provide local storage using RocksDB
         KeyValueBytesStoreSupplier storeSupplier = Stores.persistentKeyValueStore(CATEGORY_STORE_NAME);
-        CategoryClientJoiner joiner = new CategoryClientJoiner();
         // key: transaction_id, client transaction as value
         KStream<String, TransactionEvent> transactions = builder.stream(transactionsInputStreamName,
                                                         Consumed.with(Serdes.String(),  
-                                                        TransactionEventSerdes.TransactionSerde()));
+                                                        transactionEventSerder));
 
         // key the category id and the value is the description of the category
-        KTable<Integer, ClientCategory> categories = builder.table(categoriesInputStreamName,
+        GlobalKTable<Integer, ClientCategory> categories = builder.globalTable(categoriesInputStreamName,
                                                         Consumed.with(Serdes.Integer(),  
-                                                        TransactionEventSerdes.ClientCategorySerde()),  Materialized.as(storeSupplier));
+                                                        categorySerder),  Materialized.as(storeSupplier));
         
         // First validate we have good data in the input transaction if not route to dlq
         Map<String, KStream<String, TransactionEvent>> branches = transactions.split(Named.as("A-"))
@@ -72,8 +79,9 @@ public class TransactionProcessingAgent {
         // transform to the target event model
         .mapValues(v ->  buildClientOutputFromTransaction(v) )
         // lookup the category id with the category table - so use the category.id as key
-        .selectKey( (k,v) -> v.client_category_id)
-        .leftJoin(categories,
+        //.selectKey( (k,v) -> v.client_category_id)
+        .join(categories,
+              (txid,co) -> co.client_category_id,
               //When you join a stream and a table, you get a new stream
               (oldOutput,matchingCategory) -> new ClientOutput(oldOutput,matchingCategory.category_name)
             )
