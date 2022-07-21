@@ -20,21 +20,24 @@ public class JSONSerde<T> implements Serializer<T>, Deserializer<T>, Serde<T> {
 
     public JSONSerde(){}
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void configure(final Map<String, ?> configs, final boolean isKey) {}
+    public void configure(final Map<String, ?> configs, final boolean isKey) {
+    }
 
     @SuppressWarnings("unchecked")
     @Override
-    public T deserialize(final String topic, final byte[] data) {
-        if (data == null) {
+    public T deserialize(final String topic, final byte[] bytes) {
+        if (bytes == null) {
             return null;
         }
-
+        T data;
         try {
-            return (T) OBJECT_MAPPER.readValue(data, Class.forName(className));
+            data = (T) OBJECT_MAPPER.readValue(bytes, Class.forName(className));
         } catch (final IOException | ClassNotFoundException e) {
             throw new SerializationException(e);
         }
+        return data;
     }
 
     @Override

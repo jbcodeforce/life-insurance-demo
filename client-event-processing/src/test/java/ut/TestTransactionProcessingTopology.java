@@ -1,4 +1,4 @@
-package org.acme;
+package ut;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -14,7 +14,6 @@ import org.acme.infra.events.Person;
 import org.acme.infra.events.TransactionEvent;
 import org.acme.infra.events.TransactionEventSerdes;
 import org.apache.kafka.common.serialization.IntegerSerializer;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsConfig;
@@ -34,51 +33,30 @@ import org.junit.jupiter.api.TestMethodOrder;
 
 
 /**
- * Filter out items with no store name or no sku
+ * 
  */
-//@QuarkusTest
 @TestMethodOrder(OrderAnnotation.class)
-public class TestTopology {
+public class TestTransactionProcessingTopology {
 
     private  static TopologyTestDriver testDriver;
     private  static TestInputTopic<String, TransactionEvent> inputTopic;
     private  static TestInputTopic<Integer, ClientCategory> categoriesTopic;
 
     private  static TestOutputTopic<String, ClientOutput> outputTopicA;
-    private  static TestOutputTopic<String, ClientOutput> outputTopicB;
     private  static TestOutputTopic<String, TransactionEvent> dlqTopic;
     private static TransactionProcessingAgent agent;
     
-  
 
-/**
- * 
-
-        Map<String, KStream<String, ClientOutput>> branches = clients.split(Named.as("B-"))
-                .branch((k,v) ->
-                                (v.client_category_name != null && v.client_category_name.equals("Business")),
-                        Branched.as("categorya-tx")
-                )
-                .branch((k,v) ->
-                                (v.client_category_name != null && v.client_category_name.equals("Personal")),
-                        Branched.as("categoryb-tx")
-                ).defaultBranch(Branched.as("wrong-tx"));
-        branches.get("B-categorya-tx").to(outTopicNameA);
-        branches.get("B-categoryb-tx").to(outTopicNameB);
-        branches.get("B-wrong-tx").to(deadLetterTopicName);
-
- */
+   
     
-
     @BeforeAll
     public  static void setup() {
         agent = new TransactionProcessingAgent();
         agent.categoriesInputStreamName = "lf-categories";
         agent.transactionsInputStreamName = "lf-transactions";
         agent.transactionsToAOutputStreamName = "lf-tx-a";
-        agent.transactionsToBOutputStreamName = "lf-tx-b";
         agent.dlqOutputStreamName = "lfdlq";
-        Topology topology = agent.buildProcessFlow();
+        Topology topology =  agent.buildProcessFlow();
         testDriver = new TopologyTestDriver(topology, getStreamsConfig());
 
         System.out.println(topology.describe());
@@ -86,7 +64,6 @@ public class TestTopology {
         categoriesTopic = testDriver.createInputTopic(agent.categoriesInputStreamName, new IntegerSerializer(), TransactionEventSerdes.ClientCategorySerde().serializer());
        
         outputTopicA = testDriver.createOutputTopic(agent.transactionsToAOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
-        outputTopicB = testDriver.createOutputTopic(agent.transactionsToBOutputStreamName, new StringDeserializer(),  ClientDetailsSerdes.ClientOutputSerde().deserializer());
         dlqTopic = testDriver.createOutputTopic(agent.dlqOutputStreamName, new StringDeserializer(),  TransactionEventSerdes.TransactionSerde().deserializer());
 
     }
@@ -95,8 +72,8 @@ public class TestTopology {
         final Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kstream-labs");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummmy:1234");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,   TransactionEventSerdes.TransactionSerde().getClass());
+        //props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+       // props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,   TransactionEventSerdes.TransactionSerde().getClass());
         return props;
     }
 
@@ -138,7 +115,6 @@ public class TestTopology {
         ValueAndTimestamp<ClientCategory> record1 = store.get(Integer.valueOf(1));
         Assertions.assertNotNull(record1);
         Assertions.assertEquals("Personal", record1.value().category_name);
-        Assertions.assertEquals(2, store.approximateNumEntries());
      }
 
 
@@ -160,6 +136,7 @@ public class TestTopology {
     }
 
     @Test
+    @Order(4)
     public void shouldHaveFaultyTransactionMovedToDLQ() {
         sendCategories();
         Person p2 = new Person( 2, "Poo2", "Jane", "Doe" );

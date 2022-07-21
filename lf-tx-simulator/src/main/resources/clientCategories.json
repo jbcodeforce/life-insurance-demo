@@ -1,5 +1,6 @@
 [
-   {"id": 1, "category_name": "Person"},
+   {"id": 1, "category_name": "Personal"},
    {"id": 2, "category_name": "VIP"},
-   {"id": 3, "category_name": "Employee"}
+   {"id": 3, "category_name": "Employee"},
+   {"id": 4, "category_name": "Business"}
 ]

@@ -9,7 +9,6 @@ import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.TransactionEvent;
 import org.acme.infra.events.TransactionEventSerdes;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Branched;
@@ -18,7 +17,7 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
-import org.apache.kafka.streams.kstream.ValueJoiner;
+import org.apache.kafka.streams.kstream.ValueJoinerWithKey;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -71,13 +70,13 @@ public class TransactionProcessingAgent {
         // process good record
         Map<String, KStream<String, ClientOutput>> clientOut = branches.get("A-good-data")
         // transform to the target event model
-        .mapValues(v ->  buildClientOutput(v) )
+        .mapValues(v ->  buildClientOutputFromTransaction(v) )
         // lookup the category id with the category table - so use the category.id as key
         .selectKey( (k,v) -> v.client_category_id)
         .leftJoin(categories,
-                        //When you join a stream and a table, you get a new stream
-                        joiner
-                )
+              //When you join a stream and a table, you get a new stream
+              (oldOutput,matchingCategory) -> new ClientOutput(oldOutput,matchingCategory.category_name)
+            )
         .selectKey( (k,v) -> v.client_id)     
         .split(Named.as("B-"))
         .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Personal"), Branched.as("category-b"))
@@ -89,7 +88,7 @@ public class TransactionProcessingAgent {
     }
 
 
-    private ClientOutput buildClientOutput(TransactionEvent v) {
+    public ClientOutput buildClientOutputFromTransaction(TransactionEvent v) {
         ClientOutput co = new ClientOutput();
         if (v.type.equals(TransactionEvent.TX_CLIENT_CREATED) || v.type.equals(TransactionEvent.TX_CLIENT_UPDATED)) {
             Client c = (Client)v.payload;
@@ -117,10 +116,10 @@ public class TransactionProcessingAgent {
         return false;
     }
 
-    public class CategoryClientJoiner implements ValueJoiner<ClientOutput,ClientCategory,ClientOutput> {
+    public class CategoryClientJoiner implements ValueJoinerWithKey<Integer, ClientOutput,ClientCategory,ClientOutput> {
 
         @Override
-        public ClientOutput apply(ClientOutput clientIN, ClientCategory category) {
+        public ClientOutput apply(Integer k, ClientOutput clientIN, ClientCategory category) {
             clientIN.client_category_name = category.category_name;
             return clientIN;
         }
