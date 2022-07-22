@@ -1,39 +1,39 @@
 # Life insurance demonstration
 
-This repository includes a simple example of how to integrate with an existing MQ based framework that manage message distribution between MQ applications, in life insurance domain, to plug eventing capabilities like IBM Event Streams (Kafka) with minimum disruption.
+This repository includes a simple example of how to integrate, with minimum disruption, IBM Event Streams (Kafka) with an existing MQ based framework which manages messages distribution between MQ applications. The example is in life insurance domain but could be applied in other industry. 
 
 ## Architecture context
 
-Existing solution integrate a queueing framework that receive message from different applications (front end / mobile for the most part) in a Life insurance domain. This framework helps to support error management, retry, notification, data transformation, data life cycle and governance.
+The existing solution integrate a queueing framework that receives messages from different applications (front end / mobile for the most part) and addresses message distribution, message transformation, error management, retry, notification, data life cycle auditing and governance.
 
-The ask is to see how event-driven architecture will help to support some of the capability of the framework or complement it.
+The ask is to see how event-driven architecture will help to support some of the capability of the framework or complement it, and how it can help propagate message as events to event-driven microservices.
 
-Figure below illustrate a generic view of how the existing framework is running:
+Figure below illustrates a generic view of how the existing framework is running:
 
 ![](./images/existing.png)
 
-* At the top we have different front end applications that can send transactional data (write to life insurance model), or not transactional
-* The APIs consumed by the front end could be mediated with ESB (IBM IIB) flows, and then some are publishing messages to IBM MQ queues. 
+* At the top we have different front end applications that can send transactional data (write to life insurance model), or not transactional ones
+* The APIs consumed by the frontend could be mediated with ESB (IBM IIB) flows, and then some of those flows are publishing messages to IBM MQ queues. 
 * From those queues, we can get different processing running all together to do data enrichment, transformation, to get subscriber applications consuming those data.
 * Other services are responsible to do retries, auditing, manage errors, or notify end user with a mobile push or email back-end 
 * An important component of this framework is the transaction event sourcing capability: keep state of change on some interesting transactional data: for example a life insurance offer.
 
-Different flows are doing the needed works, and all this framework is basically supporting long running transaction processing and notification engine.
+Different flows are doing the needed works, and all this framework is basically supporting long running transaction processing and a notification engine.
 
-Also note, that to be generic this framework defines different mesage type (600) and adapt mediation flow via configuration.
+Also note, that to be generic this framework defines different message types (600) and adapt mediation flow via configuration.
 
 The solution in on bare metal or VM running on premise.
 ## Requirements to demonstrate
 
 1. Address how to **extend existing** architecture with Kafka based middleware and streaming processing. (See [next section](/#example-of-non-desruptive-integration))
-1. Demonstrate **streaming processing** with the exactly once delivery (See [transaction streaming component](/design/#the-client-event-stream-processing))
+1. Demonstrate **streaming processing** with the exactly once delivery (See [transaction streaming component](./design/#the-client-event-stream-processing))
 1. Ensure Event order is not changed: in the queuing approach with subscription, it is possible that a message arrived after another one could be processed before the first one is completed, which could impact data integrity.
-1. Demonstrate Data transformation to target different models, to prepare the data for a specific subscriber (a kafka consumer)
+1. Demonstrate Data transformation to target different models, to prepare the data for a specific subscriber (a kafka consumer). ([See this streaming code](https://github.com/jbcodeforce/life-insurance-demo/blob/5902d817e1ad2b47880df2988e384b6bec5470b0/client-event-processing/src/main/java/org/acme/domain/TopologyProducer.java#L97)) 
 1. Support message content based routing
 1. Dead letter queue support for data in error
-1. Support CloudEvent.io to present metadata around the message
+1. Support [CloudEvent.io](http://cloudevent.io/) to present metadata around the message
 1. Support Schema management in registry to control the definition of the message in a unique central repository
-1. Demonstrate access control to topic
+1. Demonstrate access control to topic [See user declaration](https://github.com/jbcodeforce/life-insurance-demo/blob/main/environments/lf-demo/services/ibm-eventstreams/base/tls-user.yaml). 
 
 ## Example of non-desruptive integration
 
@@ -51,10 +51,10 @@ The existing framework can be extended by adding Kafka MQ source and sink connec
     * [Dead letter queue pattern](https://ibm-cloud-architecture.github.io/refarch-eda/patterns/dlq/)
 ## Domain model
 
-[See the design section](./design/#simple-domain-model-for-client)
+We pick up the life insurance domain, but as of now very limited, it could be extended in the future. [See the design section](./design/#simple-domain-model-for-client)
 ## Components 
 
-We will leverage the following IBM Products:
+We leverage the following IBM Products:
 
 * Event Streams with one cluster definition is in [this eventstreams-dev yaml](https://github.com/jbcodeforce/life-insurance-demo/blob/main/environments/lf-demo/services/ibm-eventstreams/base/eventstreams-dev.yaml)
 * MQ broker with AMQP protocol enabled (See [this folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/services/ibm-mq/base) for deployment example)
@@ -68,6 +68,8 @@ And develop three components to demonstrate how to support requirements:
 * a Kafka streams processing app which is using standard Java Kafka Streams API. The application is in [client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/client-event-processing) 
 * Configuration for MQ source connector. The Yaml file is in [environments mq-source folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/mq-source)
 
+
+[>>> Next: Read more why EDA], fit for purpose(./eda.md)
 
 ???+ "More reading"
     * [Building reactive Java apps with Quarkus and IBM MQ](https://developer.ibm.com/tutorials/mq-building-cloud-native-reactive-java-messaging-applications/)

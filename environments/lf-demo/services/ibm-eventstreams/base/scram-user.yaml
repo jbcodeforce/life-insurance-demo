@@ -25,7 +25,7 @@ spec:
       - host: '*'
         operation: Write
         resource:
-          name: '*'
+          name: 'lf-*'
           patternType: literal
           type: topic
       - host: '*'

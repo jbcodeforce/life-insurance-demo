@@ -172,3 +172,5 @@ We can do two type of environment:
 1. Verify the message reaches the Kafka topic named `lf-raw-tx`
 
     ![](./images/lf-raw-tx-1.png)
+
+[>>> Next: OpenShift Deployment detail](./deployment.md)

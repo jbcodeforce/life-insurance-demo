@@ -172,3 +172,7 @@ The streaming algorithm is quite simple:
     ```
 
 The deployment descriptors are in the [environments/apps/client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/client-event-processing) 
+
+
+
+[>>> Next: demonstration script](./demo.md)
