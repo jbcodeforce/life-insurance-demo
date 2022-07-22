@@ -18,15 +18,16 @@ We can do two type of environment:
 
 1. Pre-requisites
 
-    * You have docker desktop or similar installed on your laptop.
+    * You have docker desktop or a compatible product installed on your laptop.
 
-1. Under the project starts docker compose:
+1. Under the project top folder starts docker compose:
 
-```sh
-docker-compose up -d
-```
+    ```sh
+    # life-insurance-demo
+    docker-compose up -d
+    ```
 
-1. Verify the existing topics are empty 
+1. Verify the existing topics are empty, using the open source tool called Kafdrop:
 
 
     ```sh
@@ -35,21 +36,51 @@ docker-compose up -d
 
     ![](./images/topics-kafdrop.png)
 
+1. When the simulator starts, it sends the categories as reference data to the `lf-category` topic, which you can verify in Kafdrop
 
-1. Configure MQ Source connector
+    ![](./images/local-categories.png)
+
+1. Configure Kafka MQ Source connector so data sent by the Simulator to MQ are moved to Kafka `lf-raw-tx` topic:
 
     ```sh
     cd environments/local
     ./sendMQSrcConfig.sh
     ```
 
-1. Send a new client creation command
+1. To access the MQ Console use the following URL  
+
+    ```sh
+    chrome https://localhost:9443
+    ```
+
+    You shoud reach a login page (admin/passw0rd) and then the Home page
+
+    ![](./images/local-mq.png)
+
+1. Send a new client creation command: which does a HTTP POST to the simulator URL `/api/v1/clients`.
 
     ```sh
     # under home
-    ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-bob.json
+    ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-julie.json
     ```
 
+1. Verify the data is now in the `lf-raw-tx`
+
+    ![](./images/local-raw-tx.png)
+
+1. The Stream processing has routed the transaction to the `lf-tx-a` topic
+
+1. Create a second transaction with one error (the category id is wrong), the message is routed to the dead letter queue
+
+    ```sh
+    ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-bob-1.json
+    ```
+
+1. Modify the client with a business category
+
+    ```sh
+    ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-bob-2.json
+    ```
 ## OpenShift Deployment demonstration
 
 1. Pre-requisites
@@ -63,7 +94,7 @@ docker-compose up -d
     make all
     ``` 
 
-    See more detail in [this section]()
+    See more detail in [this section](/deployment/)
 
 1. Verify your environments
 
@@ -85,6 +116,9 @@ docker-compose up -d
 
 1. Access the Simulator App
 
+    ```sh
+    chrome 
+    ```
 
     ![](./images/simul-home.png)
 
@@ -107,7 +141,7 @@ docker-compose up -d
             "mobile": "",
             "email": "jswimmer@email.com"
         }, 
-        "client_category_id": 0
+        "client_category_id": 1
     ```
 
     The request:

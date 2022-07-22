@@ -49,9 +49,10 @@ public class ClientResource {
     @POST
     public Client createNewClient(Client client) {
         logger.info("In createNewClient client: " + client.toString());
-         // todo add persistence 
-        UUID uuid = UUID.randomUUID();
-        client.id = uuid.toString();
+         if (client.id == null) {
+            UUID uuid = UUID.randomUUID();
+            client.id = uuid.toString();
+         }
         transactionEmitter.send(client,true);
         return client;
     }

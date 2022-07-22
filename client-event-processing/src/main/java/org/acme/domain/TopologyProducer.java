@@ -2,13 +2,14 @@ package org.acme.domain;
 
 import java.util.Map;
 
-import javax.inject.Singleton;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Produces;
 
 import org.acme.infra.events.Client;
 import org.acme.infra.events.ClientCategory;
 import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.TransactionEvent;
-import org.acme.infra.events.TransactionEventSerdes;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -18,6 +19,7 @@ import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.ValueJoinerWithKey;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
@@ -25,11 +27,16 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 
-@Singleton
-public class TransactionProcessingAgent {
+@ApplicationScoped
+public class TopologyProducer {
     public static String CATEGORY_STORE_NAME = "CategoryStore";
+    public static String CATEGORY_TOPIC = "lf-categories";
+    public static String TRANSACTION_TOPIC = "lf-raw-tx";
+    public static String OUT_A_TOPIC = "lf-tx-a";
+    public static String OUT_B_TOPIC = "lf-tx-b";
+    public static String DLQ_TOPIC = "lf-dlq";
 
-    @ConfigProperty(name="app.categories.topic", defaultValue = "lf-categories")
+    @ConfigProperty(name="app.categories.topic")
     public String categoriesInputStreamName;
 
     @ConfigProperty(name="app.transactions.topic", defaultValue = "lf-transactions")
@@ -44,13 +51,14 @@ public class TransactionProcessingAgent {
     @ConfigProperty(name="app.transactions.dlq.topic", defaultValue = "lf-dlq")
     public String dlqOutputStreamName;
 
-    final static ObjectMapperSerde<ClientOutput> clientOutputSerder = new ObjectMapperSerde<ClientOutput>(ClientOutput.class);
-    final static ObjectMapperSerde<TransactionEvent> transactionEventSerder = new ObjectMapperSerde<TransactionEvent>(TransactionEvent.class);
-    final static ObjectMapperSerde<ClientCategory> categorySerder = new ObjectMapperSerde<ClientCategory>(ClientCategory.class);
+   
 
-    
+    @Produces
     public Topology buildProcessFlow() {
         final StreamsBuilder builder = new StreamsBuilder();
+        final  ObjectMapperSerde<ClientOutput> clientOutputSerder = new ObjectMapperSerde<>(ClientOutput.class);
+        final  ObjectMapperSerde<TransactionEvent> transactionEventSerder = new ObjectMapperSerde<>(TransactionEvent.class);
+        final  ObjectMapperSerde<ClientCategory> categorySerder = new ObjectMapperSerde<>(ClientCategory.class);
         // Adding a state store is a simple matter of creating a StoreSupplier
         // instance with one of the static factory methods on the Stores class.
         // all persistent StateStore instances provide local storage using RocksDB
@@ -87,11 +95,11 @@ public class TransactionProcessingAgent {
             )
         .selectKey( (k,v) -> v.client_id)     
         .split(Named.as("B-"))
-        .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Personal"), Branched.as("category-b"))
+        .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Business"), Branched.as("category-b"))
         .defaultBranch(Branched.as("category-a"));
 
-        clientOut.get("B-category-a").to(transactionsToAOutputStreamName);
-        clientOut.get("B-category-b").to(transactionsToBOutputStreamName);
+        clientOut.get("B-category-a").to(transactionsToAOutputStreamName,Produced.with(Serdes.String(), clientOutputSerder));
+        clientOut.get("B-category-b").to(transactionsToBOutputStreamName,Produced.with(Serdes.String(), clientOutputSerder));
         return builder.build();
     }
 

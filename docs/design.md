@@ -73,7 +73,58 @@ The interesting part of the connector configuration is the use of JMS and the JM
 
 ## The Client event stream processing.
 
-The code is in the [client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/client-event-processing)
+The code is in the [client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/client-event-processing), and supports the implementation of the green component in figure below:
 
+![](./images/stream-processing.png)
+
+The streaming algorithm is quite simple
+
+1. get continuous update of the category reference data: this should be rare, but the process will get any new updated to those data. This will be a Table in memory and persisted in Kafka to keep only the last update per record key. The table below illustrates the mockup data used:
+
+    | Key | Value |
+    | --- | --- |
+    |  1 |  "category_name": "Personal" |
+    |  2  | "category_name": "VIP" |
+    | 3 | "category_name": "Employee" |
+    | 4 |"category_name": "Business" |
+
+1. Process transaction events in a streams, validate the data, and any transaction in error goes to dead letter queue.
+
+    ```json
+    {
+      "id": "101012",
+      "code": "C02",
+      "insuredPerson": {
+          "id": 2,
+          "code": "P02",
+          "first_name": "julie",
+          "last_name": "thesimmer",
+          "address": "10 market street, CA, San Franciso",
+          "phone": "650-650-650",
+          "mobile": "",
+          "email": "jswimmer@email.com"
+      }, 
+      "client_category_id": 1
+    }
+    ```
+
+1. Transform the input transaction hierarchical model into a flat model: [ClientOutput class](https://github.com/jbcodeforce/life-insurance-demo/blob/main/client-event-processing/src/main/java/org/acme/infra/events/ClientOutput.java)
+
+    ```java
+    public class ClientOutput implements JSONSerdeCompatible {
+    public String client_id;
+    public String client_code;
+    public Integer client_category_id;
+    public String client_category_name;
+    public String first_name;
+    public String last_name;
+    public String address;
+    public String phone;
+    public String mobile;
+    public String email;
+    ```
+    
+1. Enrich with the category name by doing a join with the categories table
+1. Route based on category name content to different target.
 
 The deployment descriptors are in the [environements/apps folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/client-event-processing)

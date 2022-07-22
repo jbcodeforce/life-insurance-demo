@@ -44,8 +44,8 @@ services:
     entrypoint: [ "bash",  "-c", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-raw-tx 
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-dlq 
             && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-tx-a
-            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-categories
-            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-tx-b"]
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-tx-b
+            && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create  --replication-factor 1 --partitions 1 --topic lf-categories"]
   kafdrop:
     image: obsidiandynamics/kafdrop
     container_name: kafdrop
@@ -108,6 +108,16 @@ services:
     depends_on:
       - ibmmq
       - kafka
+  client_agent:
+    container_name: client_agent
+    image: quay.io/jbcodeforce/lf-client-agent
+    ports:
+      - 8081:8081
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+    depends_on:
+      - tx_simul
   kconnect: 
     hostname: kconnect
     container_name: kconnect

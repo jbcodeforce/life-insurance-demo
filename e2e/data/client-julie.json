@@ -1,5 +1,4 @@
 {
-    "id": "101012",
     "code": "C02",
     "insuredPerson": {
         "id": 2,
@@ -11,5 +10,5 @@
         "mobile": "",
         "email": "jswimmer@email.com"
     }, 
-    "client_category_id": 0
+    "client_category_id": 1
 }
