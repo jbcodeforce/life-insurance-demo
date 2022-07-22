@@ -43,10 +43,14 @@ We can do two type of environment:
 1. Configure Kafka MQ Source connector so data sent by the Simulator to MQ are moved to Kafka `lf-raw-tx` topic:
 
     ```sh
-    cd environments/local
-    ./sendMQSrcConfig.sh
+    ./environments/local/sendMQSrcConfig.sh
     ```
+    Result should look like:
 
+    ```sh
+    ["mq-source"]20
+    ``` 
+    
 1. To access the MQ Console use the following URL  
 
     ```sh
@@ -76,11 +80,24 @@ We can do two type of environment:
     ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-bob-1.json
     ```
 
+    ![](./images/local_dlq.png)
+
 1. Modify the client with a business category
 
     ```sh
     ./e2e/local/sendTxToSimulator.sh ./e2e/data/client-bob-2.json
     ```
+
+1. All the transactions are kept in order to reprocess if needed:
+
+    ![](./images/local_4-tx.png)
+    
+1. Stop your environment
+
+    ```sh
+    docker compose down
+    ```
+
 ## OpenShift Deployment demonstration
 
 1. Pre-requisites

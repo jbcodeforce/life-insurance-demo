@@ -9,7 +9,6 @@ import org.acme.infra.events.Client;
 import org.acme.infra.events.ClientCategory;
 import org.acme.infra.events.ClientOutput;
 import org.acme.infra.events.TransactionEvent;
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -52,7 +51,15 @@ public class TopologyProducer {
     public String dlqOutputStreamName;
 
    
-
+    /**
+     * The streaming topology listens to two input streams and does
+     * 1- get continuous update of the category reference data
+     * 2- validate the data, and any transaction in error goes to dead letter queue
+     * 3- Transform the input transaction hierarchical model into a flat model
+     * 4- Enrich with the category name by doing a join with the categories table
+     * 5- Route based on category name content to different target.
+     * @return a Stream topology as bean to be processed by quarkus
+     */
     @Produces
     public Topology buildProcessFlow() {
         final StreamsBuilder builder = new StreamsBuilder();
@@ -66,35 +73,38 @@ public class TopologyProducer {
         // key: transaction_id, client transaction as value
         KStream<String, TransactionEvent> transactions = builder.stream(transactionsInputStreamName,
                                                         Consumed.with(Serdes.String(),  
-                                                        transactionEventSerder));
+                                                                     transactionEventSerder));
 
-        // key the category id and the value is the description of the category
+        // 1- Keep categories in a Table: key the category id and the value is the description of the category
         GlobalKTable<Integer, ClientCategory> categories = builder.globalTable(categoriesInputStreamName,
                                                         Consumed.with(Serdes.Integer(),  
                                                         categorySerder),  Materialized.as(storeSupplier));
-        
-        // First validate we have good data in the input transaction if not route to dlq
-        Map<String, KStream<String, TransactionEvent>> branches = transactions.split(Named.as("A-"))
+       
+        // use for tracing  categories.toStream().peek( (K,V) ->  System.out.println(V) );
+
+        // 2- validate we have good data in the input transaction if not route to dlq
+        Map<String, KStream<String, TransactionEvent>> branches = transactions
+        .split(Named.as("A-"))
         .branch((k,v) -> transactionNotValid(v), Branched.as("error"))
         .defaultBranch(Branched.as("good-data"));
         
         // error records go to dead letter queue
         branches.get("A-error")
         .to(dlqOutputStreamName);
-
         // process good record
         Map<String, KStream<String, ClientOutput>> clientOut = branches.get("A-good-data")
-        // transform to the target event model
-        .mapValues(v ->  buildClientOutputFromTransaction(v) )
-        // lookup the category id with the category table - so use the category.id as key
-        //.selectKey( (k,v) -> v.client_category_id)
+        // 3-  Transform the input transaction hierarchical model into a flat model
+        .mapValues(v ->  buildClientOutputFromTransaction(v))
+        // 4- Enrich with the category name by doing a join with the categories table
         .join(categories,
-              (txid,co) -> co.client_category_id,
-              //When you join a stream and a table, you get a new stream
-              (oldOutput,matchingCategory) -> new ClientOutput(oldOutput,matchingCategory.category_name)
-            )
-        .selectKey( (k,v) -> v.client_id)     
+            (txid,co) -> co.client_category_id,
+            //When you join a stream and a table, you get a new stream
+            (oldOutput,matchingCategory) -> new ClientOutput(oldOutput,matchingCategory.category_name)
+        )  
+        .selectKey( (k,v) -> v.client_id)
+        .peek((K,V) -> System.out.println("@@@@ " + V))  
         .split(Named.as("B-"))
+        // 5- Route based on category name content to different target
         .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Business"), Branched.as("category-b"))
         .defaultBranch(Branched.as("category-a"));
 

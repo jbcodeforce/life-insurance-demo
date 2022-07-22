@@ -40,4 +40,7 @@ public class ClientOutput implements JSONSerdeCompatible {
         this.email = oldOutput.email;
     }
 
+    public String toString(){
+        return "@@@@ cid:" + client_id + " cname:" + client_category_name;
+    }
 }

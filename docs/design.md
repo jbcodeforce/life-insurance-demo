@@ -77,7 +77,7 @@ The code is in the [client-event-processing folder](https://github.com/jbcodefor
 
 ![](./images/stream-processing.png)
 
-The streaming algorithm is quite simple
+The streaming algorithm is quite simple:
 
 1. get continuous update of the category reference data: this should be rare, but the process will get any new updated to those data. This will be a Table in memory and persisted in Kafka to keep only the last update per record key. The table below illustrates the mockup data used:
 
@@ -87,6 +87,14 @@ The streaming algorithm is quite simple
     |  2  | "category_name": "VIP" |
     | 3 | "category_name": "Employee" |
     | 4 |"category_name": "Business" |
+
+    Topology code with GlobalKtable so if we partition the input stream we have a unique table.
+
+    ```java
+    GlobalKTable<Integer, ClientCategory> categories = builder.globalTable(categoriesInputStreamName,
+                                                        Consumed.with(Serdes.Integer(),  
+                                                        categorySerder),  Materialized.as(storeSupplier));
+    ```
 
 1. Process transaction events in a streams, validate the data, and any transaction in error goes to dead letter queue.
 
@@ -108,6 +116,20 @@ The streaming algorithm is quite simple
     }
     ```
 
+    The transaction streaming processing start with the following statements:
+
+    ```java
+    KStream<String, TransactionEvent> transactions = builder.stream(transactionsInputStreamName,
+                                                        Consumed.with(Serdes.String(),  
+                                                                     transactionEventSerder));
+    Map<String, KStream<String, TransactionEvent>> branches = transactions
+        .split(Named.as("A-"))
+        .branch((k,v) -> transactionNotValid(v), Branched.as("error"))
+        .defaultBranch(Branched.as("good-data"));
+    ```
+
+    This is an exactly once delivery.
+
 1. Transform the input transaction hierarchical model into a flat model: [ClientOutput class](https://github.com/jbcodeforce/life-insurance-demo/blob/main/client-event-processing/src/main/java/org/acme/infra/events/ClientOutput.java)
 
     ```java
@@ -123,8 +145,30 @@ The streaming algorithm is quite simple
     public String mobile;
     public String email;
     ```
+
+    Data transformation is simple:
+
+    ```java
+    branches.get("A-good-data")
+        .mapValues(v ->  buildClientOutputFromTransaction(v))
+    ```
     
 1. Enrich with the category name by doing a join with the categories table
+
+    ```java
+     .join(categories,
+            (txid,co) -> co.client_category_id,
+            //When you join a stream and a table, you get a new stream
+            (oldOutput,matchingCategory) -> new ClientOutput(oldOutput,matchingCategory.category_name)
+        )  
+    ```
+
 1. Route based on category name content to different target.
 
-The deployment descriptors are in the [environements/apps folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/client-event-processing)
+    ```java
+     .branch( (k,v) -> v.client_category_name != null && v.client_category_name.equals("Business"), Branched.as("category-b"))
+        .defaultBranch(Branched.as("category-a"));
+
+    ```
+
+The deployment descriptors are in the [environments/apps/client-event-processing folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/client-event-processing) 

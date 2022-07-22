@@ -1,10 +1,11 @@
 package ut;
 
 import static org.acme.domain.TopologyProducer.CATEGORY_TOPIC;
+import static org.acme.domain.TopologyProducer.DLQ_TOPIC;
 import static org.acme.domain.TopologyProducer.OUT_A_TOPIC;
 import static org.acme.domain.TopologyProducer.OUT_B_TOPIC;
 import static org.acme.domain.TopologyProducer.TRANSACTION_TOPIC;
-import static org.acme.domain.TopologyProducer.DLQ_TOPIC;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +31,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -38,7 +38,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -50,12 +53,14 @@ import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 @QuarkusTestResource(KafkaResource.class)
+@TestMethodOrder(OrderAnnotation.class)
 public class ProcessTransactionTest {
     
     KafkaProducer<Integer,ClientCategory> categoryProducer;
     KafkaProducer<String,TransactionEvent> transactionProducer;
     KafkaConsumer<String,ClientOutput> clientOutputConsumerA;
     KafkaConsumer<String,TransactionEvent> dlqConsumer;
+    KafkaConsumer<String,ClientOutput> clientOutputConsumerB;
 
     @BeforeAll
     public static void createTopic() throws InterruptedException, ExecutionException, TimeoutException{
@@ -77,8 +82,9 @@ public class ProcessTransactionTest {
     public void setup() {
         categoryProducer = new KafkaProducer<>(producerProps(),new IntegerSerializer(),new ObjectMapperSerializer<>());
         transactionProducer = new KafkaProducer<>(producerProps(),new StringSerializer(),new ObjectMapperSerializer<>());
-        clientOutputConsumerA =  new KafkaConsumer(consumerProps(), new IntegerDeserializer(), new ObjectMapperDeserializer<>(ClientOutput.class));
+        clientOutputConsumerA =  new KafkaConsumer(consumerProps(), new StringDeserializer(), new ObjectMapperDeserializer<>(ClientOutput.class));
         dlqConsumer = new KafkaConsumer<>(consumerProps(), new StringDeserializer(), new ObjectMapperDeserializer<>(TransactionEvent.class));
+        clientOutputConsumerB =  new KafkaConsumer(consumerProps(), new StringDeserializer(), new ObjectMapperDeserializer<>(ClientOutput.class));
     }
 
     @AfterEach
@@ -86,15 +92,42 @@ public class ProcessTransactionTest {
         categoryProducer.close();
         transactionProducer.close();
         clientOutputConsumerA.close();
+        dlqConsumer.close();
     }
 
     @Test
-    public void shouldGetTransactionEnrichedAndTransformed(){
+    @Order(1)
+    public void shouldRouteBadTxToDLQ(){
+        dlqConsumer.subscribe(Collections.singletonList(DLQ_TOPIC));
         sendCategories();
+        sendAtransaction(-1);
+        List<ConsumerRecord<String,TransactionEvent>> results = pollDQL(dlqConsumer,1);
+        Assertions.assertEquals(1,results.size());
+        Assertions.assertEquals("c001",results.get(0).value().payload.code); 
+    }
+
+    @Test
+    @Order(2)
+    public void shouldGetTransactionEnrichedAndTransformed(){
         clientOutputConsumerA.subscribe(Collections.singletonList(OUT_A_TOPIC));
+        sendCategories();
         sendAtransaction(1);
         List<ConsumerRecord<String,ClientOutput>> results = poll(clientOutputConsumerA,1);
         Assertions.assertEquals("c001",results.get(0).value().client_code); 
+        Assertions.assertEquals("Personal",results.get(0).value().client_category_name); 
+    }
+
+
+
+    @Test
+    @Order(3)
+    public void shouldGetTransactionEnrichedAndTransformedRoutedToBsubscriber(){
+        clientOutputConsumerB.subscribe(Collections.singletonList(OUT_B_TOPIC));
+        sendCategories();
+        sendAtransaction(4);
+        List<ConsumerRecord<String,ClientOutput>> results = poll(clientOutputConsumerB,1);
+        Assertions.assertEquals("c001",results.get(0).value().client_code); 
+        Assertions.assertEquals("Business",results.get(0).value().client_category_name); 
     }
 
 
@@ -138,6 +171,19 @@ public class ProcessTransactionTest {
         List<ConsumerRecord<String,ClientOutput>> outList = new ArrayList<>();
         while (fetched < expectedRecordCount) {
             ConsumerRecords<String,ClientOutput> records = consumer.poll(Duration.ofSeconds(4));
+            records.forEach(outList::add);
+            fetched = outList.size();
+            System.out.print(".");
+        }
+        System.out.println(fetched);
+        return outList;
+    }
+
+    private List<ConsumerRecord<String,TransactionEvent>> pollDQL(Consumer<String,TransactionEvent> consumer,int expectedRecordCount) {
+        int fetched = 0;
+        List<ConsumerRecord<String,TransactionEvent>> outList = new ArrayList<>();
+        while (fetched < expectedRecordCount) {
+            ConsumerRecords<String,TransactionEvent> records = consumer.poll(Duration.ofSeconds(4));
             records.forEach(outList::add);
             fetched = outList.size();
             System.out.print(".");

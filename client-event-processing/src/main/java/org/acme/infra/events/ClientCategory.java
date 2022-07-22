@@ -5,7 +5,7 @@ import java.util.Date;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
-public class ClientCategory implements JSONSerdeCompatible {
+public class ClientCategory {
     public int id;
     public String category_name;
     public long updatedTime;
@@ -16,5 +16,9 @@ public class ClientCategory implements JSONSerdeCompatible {
         this.id = id;
         this.category_name = category_name;
         this.updatedTime = new Date().getTime();
+    }
+
+    public String toString(){
+        return "{ id: " + id + "name: " + category_name + " }";
     }
 }
