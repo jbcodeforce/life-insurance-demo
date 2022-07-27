@@ -69,7 +69,7 @@ And develop three components to demonstrate how to support requirements:
 * Configuration for MQ source connector. The Yaml file is in [environments mq-source folder](https://github.com/jbcodeforce/life-insurance-demo/tree/main/environments/lf-demo/apps/mq-source)
 
 
-[>>> Next: Read more why EDA], fit for purpose(./eda.md)
+[>>> Next: Read more why EDA, fit for purpose...](./eda.md)
 
 ???+ "More reading"
     * [Building reactive Java apps with Quarkus and IBM MQ](https://developer.ibm.com/tutorials/mq-building-cloud-native-reactive-java-messaging-applications/)

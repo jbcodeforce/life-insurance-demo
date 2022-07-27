@@ -48,7 +48,6 @@ spec:
     min.insync.replicas: 1
     cleanup.policy: delete
     delete.retention.ms: 86400000
-
 --- 
 
 apiVersion: eventstreams.ibm.com/v1beta2
@@ -65,7 +64,6 @@ spec:
     min.insync.replicas: 1
     cleanup.policy: delete
     delete.retention.ms: 86400000
-
 --- 
 
 apiVersion: eventstreams.ibm.com/v1beta2

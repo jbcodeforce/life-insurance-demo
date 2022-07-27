@@ -26,6 +26,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
 import io.quarkus.runtime.StartupEvent;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.reactive.messaging.kafka.KafkaRecord;
 
 
 @ApplicationScoped
@@ -99,7 +100,7 @@ public class ClientResource {
     public void onStart(@Observes StartupEvent ev) {
         transactionEmitter.preProcessing();
         for (ClientCategory category : clientRepository.getListOfCategory()) {
-            categoryEventEmitter.send(category);
+            categoryEventEmitter.send(KafkaRecord.of(category.id, category));
         }
         
     }

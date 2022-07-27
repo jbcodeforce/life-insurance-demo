@@ -1,14 +1,19 @@
 package org.acme.domain;
 
 import java.util.Map;
+import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 
 import org.acme.infra.events.Client;
 import org.acme.infra.events.ClientCategory;
+import org.acme.infra.events.ClientCategorySerdes;
 import org.acme.infra.events.ClientOutput;
+import org.acme.infra.events.ClientOutputSerdes;
 import org.acme.infra.events.TransactionEvent;
+import org.acme.infra.events.TransactionSerdes;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -19,15 +24,13 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.ValueJoinerWithKey;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
-
 @ApplicationScoped
 public class TopologyProducer {
+    private static final Logger LOG = Logger.getLogger(TopologyProducer.class.getName()); 
     public static String CATEGORY_STORE_NAME = "CategoryStore";
     public static String CATEGORY_TOPIC = "lf-categories";
     public static String TRANSACTION_TOPIC = "lf-raw-tx";
@@ -51,6 +54,10 @@ public class TopologyProducer {
     public String dlqOutputStreamName;
 
    
+    public TopologyProducer(){
+        LOG.info("TopologyProducer created produces to " + transactionsToAOutputStreamName + " or " + transactionsToBOutputStreamName);
+    }
+
     /**
      * The streaming topology listens to two input streams and does
      * 1- get continuous update of the category reference data
@@ -63,9 +70,9 @@ public class TopologyProducer {
     @Produces
     public Topology buildProcessFlow() {
         final StreamsBuilder builder = new StreamsBuilder();
-        final  ObjectMapperSerde<ClientOutput> clientOutputSerder = new ObjectMapperSerde<>(ClientOutput.class);
-        final  ObjectMapperSerde<TransactionEvent> transactionEventSerder = new ObjectMapperSerde<>(TransactionEvent.class);
-        final  ObjectMapperSerde<ClientCategory> categorySerder = new ObjectMapperSerde<>(ClientCategory.class);
+        final  Serde<ClientOutput> clientOutputSerder = ClientOutputSerdes.ClientOutputSerde();
+        final  Serde<TransactionEvent> transactionEventSerder = TransactionSerdes.TransactionEventSerde();
+        final  Serde<ClientCategory> categorySerder = ClientCategorySerdes.ClientCategorySerde();
         // Adding a state store is a simple matter of creating a StoreSupplier
         // instance with one of the static factory methods on the Stores class.
         // all persistent StateStore instances provide local storage using RocksDB
@@ -74,13 +81,15 @@ public class TopologyProducer {
         KStream<String, TransactionEvent> transactions = builder.stream(transactionsInputStreamName,
                                                         Consumed.with(Serdes.String(),  
                                                                      transactionEventSerder));
+        transactions.peek((K,V) -> System.out.println("@@@@ " + V));
 
+       
         // 1- Keep categories in a Table: key the category id and the value is the description of the category
         GlobalKTable<Integer, ClientCategory> categories = builder.globalTable(categoriesInputStreamName,
                                                         Consumed.with(Serdes.Integer(),  
                                                         categorySerder),  Materialized.as(storeSupplier));
        
-        // use for tracing  categories.toStream().peek( (K,V) ->  System.out.println(V) );
+
 
         // 2- validate we have good data in the input transaction if not route to dlq
         Map<String, KStream<String, TransactionEvent>> branches = transactions
@@ -110,6 +119,7 @@ public class TopologyProducer {
 
         clientOut.get("B-category-a").to(transactionsToAOutputStreamName,Produced.with(Serdes.String(), clientOutputSerder));
         clientOut.get("B-category-b").to(transactionsToBOutputStreamName,Produced.with(Serdes.String(), clientOutputSerder));
+ 
         return builder.build();
     }
 
@@ -141,15 +151,6 @@ public class TopologyProducer {
         }
         return false;
     }
-
-    public class CategoryClientJoiner implements ValueJoinerWithKey<Integer, ClientOutput,ClientCategory,ClientOutput> {
-
-        @Override
-        public ClientOutput apply(Integer k, ClientOutput clientIN, ClientCategory category) {
-            clientIN.client_category_name = category.category_name;
-            return clientIN;
-        }
-        
-    }
+    
 }
 

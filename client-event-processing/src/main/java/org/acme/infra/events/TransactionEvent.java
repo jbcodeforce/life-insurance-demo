@@ -15,6 +15,6 @@ public class TransactionEvent {
     public TransactionEvent() {}
 
     public String toString(){
-        return "@@@@ " + txid + " type: " + type + "categor_id: " + payload.client_category_id;
+        return "@@@@ " + txid + " type: " + type + " categor_id: " + payload.client_category_id;
     }
 }

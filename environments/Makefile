@@ -56,6 +56,7 @@ tx_client-agent:
 
 clean:  clean_jobs 
 	@oc delete -k ./lf-demo/apps/lf-tx-simulator/overlays
+	@oc delete -k ./lf-demo/apps/lf-client-agent/overlays
 	@oc delete -f ./lf-demo/apps/mq-source/kafka-mq-src-connector.yaml
 	@oc delete -f ./lf-demo/services/kconnect/kafka-connect.yaml
 	@oc delete -k ./lf-demo/services/ibm-mq/overlays

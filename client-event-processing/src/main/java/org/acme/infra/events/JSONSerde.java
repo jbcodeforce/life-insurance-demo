@@ -10,34 +10,29 @@ import org.apache.kafka.common.serialization.Serializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class JSONSerde<T extends JSONSerdeCompatible > implements Serializer<T>, Deserializer<T>, Serde<T> {
+public class JSONSerde<T> implements Serializer<T>, Deserializer<T>, Serde<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private String className;
 
     public JSONSerde(String cn){
         this.className = cn;
     }
-
-    public JSONSerde(){}
+    
+    @Override
+    public void configure(final Map<String, ?> configs, final boolean isKey) {}
 
     @SuppressWarnings("unchecked")
     @Override
-    public void configure(final Map<String, ?> configs, final boolean isKey) {
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public T deserialize(final String topic, final byte[] bytes) {
-        if (bytes == null) {
+    public T deserialize(final String topic, final byte[] data) {
+        if (data == null) {
             return null;
         }
-        T data;
+  
         try {
-            data = (T) OBJECT_MAPPER.readValue(bytes, Class.forName(className));
+            return (T) OBJECT_MAPPER.readValue(data, Class.forName(className));
         } catch (final IOException | ClassNotFoundException e) {
             throw new SerializationException(e);
         }
-        return data;
     }
 
     @Override

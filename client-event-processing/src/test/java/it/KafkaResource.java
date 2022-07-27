@@ -1,4 +1,4 @@
-package ut;
+package it;
 
 import java.util.Collections;
 import java.util.Map;
@@ -18,7 +18,7 @@ public class KafkaResource implements QuarkusTestResourceLifecycleManager {
     @Override
     public Map<String, String> start() {
         strimziKafkaContainer.start();
-        return Collections.singletonMap("quarkus.kafka-streams.bootstrap-servers", strimziKafkaContainer.getBootstrapServers());
+        return Collections.singletonMap("kafka.bootstrap.servers", strimziKafkaContainer.getBootstrapServers());
     }
 
     @Override

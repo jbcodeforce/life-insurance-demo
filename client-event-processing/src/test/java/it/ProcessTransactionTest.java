@@ -1,4 +1,4 @@
-package ut;
+package it;
 
 import static org.acme.domain.TopologyProducer.CATEGORY_TOPIC;
 import static org.acme.domain.TopologyProducer.DLQ_TOPIC;
@@ -18,6 +18,7 @@ import java.util.concurrent.TimeoutException;
 import org.acme.infra.events.Client;
 import org.acme.infra.events.ClientCategory;
 import org.acme.infra.events.ClientOutput;
+import org.acme.infra.events.EventProcessingAgent;
 import org.acme.infra.events.Person;
 import org.acme.infra.events.TransactionEvent;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 
 import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
 import io.quarkus.kafka.client.serialization.ObjectMapperSerializer;
@@ -61,7 +63,9 @@ public class ProcessTransactionTest {
     KafkaConsumer<String,ClientOutput> clientOutputConsumerA;
     KafkaConsumer<String,TransactionEvent> dlqConsumer;
     KafkaConsumer<String,ClientOutput> clientOutputConsumerB;
-
+    @Inject
+    EventProcessingAgent processingAgent;
+    
     @BeforeAll
     public static void createTopic() throws InterruptedException, ExecutionException, TimeoutException{
         AdminClient adminClient = AdminClient.create(
@@ -147,6 +151,7 @@ public class ProcessTransactionTest {
         tx1.txid = cl1.id;
         tx1.payload = cl1;
         tx1.type = TransactionEvent.TX_CLIENT_CREATED;
+        System.out.println(tx1.toString());
         transactionProducer.send(new ProducerRecord<String,TransactionEvent>(TRANSACTION_TOPIC, tx1.txid, tx1));
 
     }

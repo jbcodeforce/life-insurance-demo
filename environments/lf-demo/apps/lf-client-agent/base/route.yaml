@@ -9,7 +9,7 @@ spec:
   host: ""
   path: /
   port:
-    targetPort: 8080
+    targetPort: 8081
   to:
     kind: Service
     name: lf-client-agent

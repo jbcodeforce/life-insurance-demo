@@ -5,6 +5,9 @@ We assume you have already Cloud Pak for Integration installed, and you are alre
 
 ## Pre-requisites
 
+* make tool
+* oc CLI
+* Logged to your OpenShift cluster
 
 ## Using make
 

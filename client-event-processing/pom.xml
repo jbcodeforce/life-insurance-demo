@@ -13,9 +13,9 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-    <quarkus.platform.version>2.10.2.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.11.1.Final</quarkus.platform.version>
     <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
-    <kafka-version>3.2.0</kafka-version>
+    <kafka.version>3.2.0</kafka.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -29,10 +29,22 @@
     </dependencies>
   </dependencyManagement>
   <dependencies>
-
+    <!--
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-kafka-streams</artifactId>
+    </dependency>
+
+  -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-streams</artifactId>
+      <version>${kafka.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${kafka.version}</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -45,6 +57,7 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-reactive-messaging-kafka</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -74,7 +87,7 @@
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams-test-utils</artifactId>
-      <version>${kafka-version}</version>
+      <version>${kafka.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

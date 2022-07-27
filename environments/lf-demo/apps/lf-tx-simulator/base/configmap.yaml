@@ -9,6 +9,9 @@ data:
   MQ_QMGR: QM1 
   MQ_QUEUE_NAME: RAWTX
   MQ_CHANNEL: DEV.APP.SVRCONN
+  KAFKA_BOOTSTRAP_SERVERS: dev-kafka-bootstrap.lf-demo.svc:9092
+  KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+  CATEGORY_TOPIC: lf-categories
   
 
   
